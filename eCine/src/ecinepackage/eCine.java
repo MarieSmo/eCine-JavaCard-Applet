@@ -27,26 +27,34 @@ public class eCine extends Applet {
 	public static final byte SW2_CARD_LOCKED = (byte) 0x04;
 	public static final byte SW2_INVALID_REFUND_AMOUNT = (byte) 0x05;
 	public static final byte SW2_EXCEED_MAXIMUM_BALANCE = (byte) 0x06;
+	public static final byte SW2_MAX_TRANSACTION_AMOUNT_REACHED = (byte) 0x07;
+	public static final byte SW2_CARD_DEAD = (byte) 0x08;
 
 	
 	private static byte balance;
 	private static byte rewards;
+	public static byte transactions;
 	private static OwnerPIN userPIN;
 	private static OwnerPIN adminPUK;
 	
 	public static final byte MAX_REFUND_AMOUNT = (byte) 50;
 	public static final byte MAX_BALANCE_AMOUNT = (byte) 100;
+	public static final byte MAX_TRANSACTIONS = (byte) 127;
 
 	private static Screening[] screenings;
 	private static Screening immediateScreening;
 
 	private eCine() {
 		balance = (byte) 0;
+		transactions = (byte) 0;
 		screenings = new Screening[]{null, null, null, null, null};
 
 		byte[] pin = { 1, 2, 3, 4 };
 		userPIN = new OwnerPIN((byte) 3, (byte) 4);
 		userPIN.update(pin, (short) 0, (byte) 4);
+		byte[] puk = { 0, 0, 0, 1 };
+		adminPUK = new OwnerPIN((byte) 3, (byte) 4);
+		adminPUK.update(puk, (short) 0, (byte) 4);
 	}
 
 	public static void install(byte bArray[], short bOffset, byte bLength)
@@ -63,6 +71,9 @@ public class eCine extends Applet {
 		if (buffer[ISO7816.OFFSET_CLA] != CLA_ECINE) {
 			ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
 		}
+		if (transactions == MAX_TRANSACTIONS) {
+			ISOException.throwIt(SW2_MAX_TRANSACTION_AMOUNT_REACHED);
+		}
 
 		switch (buffer[ISO7816.OFFSET_INS]) {
 		case INS_BUY_TICKET:
@@ -76,8 +87,9 @@ public class eCine extends Applet {
 			refundBalance(apdu);
 			break;
 		case INS_UNLOCK_CARD:
-			apdu.setIncomingAndReceive();
-			// compteur = buffer[ISO7816.OFFSET_CDATA];
+			if (userPIN.getTriesRemaining() <=0) {
+				unlockCard(apdu);
+			}
 			break;
 		case INS_ARCHIVE_TICKET:
 			apdu.setIncomingAndReceive();
@@ -89,6 +101,7 @@ public class eCine extends Applet {
 		default:
 			ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
 		}
+		transactions++;
 	}
 
 	private void addScreening(Screening s) {
@@ -158,6 +171,22 @@ public class eCine extends Applet {
 	    if ( ( balance + refund) > MAX_BALANCE_AMOUNT) ISOException.throwIt(SW2_EXCEED_MAXIMUM_BALANCE);
 
 	    balance = (byte)(balance + refund);
+	}
+	
+	private void unlockCard(APDU apdu) {
+		byte[] buffer = apdu.getBuffer();
+		// retrieve the PUK data for validation.
+		byte byteRead = (byte) (apdu.setIncomingAndReceive());
+
+		// check pin
+		if (adminPUK.check(buffer, ISO7816.OFFSET_CDATA, byteRead) == false) {
+			if (adminPUK.getTriesRemaining() <= 0) {
+				ISOException.throwIt(SW2_CARD_DEAD);
+			} else {
+				ISOException.throwIt(SW2_VERIFICATION_FAILED);
+			}
+		}
+		userPIN.resetAndUnblock();
 	}
 
 }

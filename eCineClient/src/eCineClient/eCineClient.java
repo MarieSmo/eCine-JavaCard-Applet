@@ -179,11 +179,7 @@ public class eCineClient {
 				case 1:
 					apdu.command[Apdu.INS] = eCine.INS_GET_BALANCE;
 					cad.exchangeApdu(apdu);
-					if (apdu.getStatus() != 0x9000) {
-						System.out.println(apdu.getStatus());
-						System.out
-								.println("Erreur : status word different de 0x9000");
-					} else {
+					if (manageError(apdu.getStatus())) {
 						System.out.println("Balance : " + apdu.dataOut[0]);
 					}
 					break;
@@ -209,16 +205,11 @@ public class eCineClient {
 
 				case 3:
 					apdu.command[Apdu.INS] = eCine.INS_UNLOCK_CARD;
-					byte[] donnees = new byte[1];
-					donnees[0] = 0;
-					apdu.setDataIn(donnees);
+					System.out.println("Please enter admin PUK:");
+					pin = readPin();
+					apdu.setDataIn(pin);
 					cad.exchangeApdu(apdu);
-					if (apdu.getStatus() != 0x9000) {
-						System.out
-								.println("Erreur : status word different de 0x9000");
-					} else {
-						System.out.println("OK");
-					}
+					manageError(apdu.getStatus());
 					break;
 
 				case 4:
