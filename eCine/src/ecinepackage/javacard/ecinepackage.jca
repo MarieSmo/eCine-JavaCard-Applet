@@ -1,0 +1,196 @@
+// converted by version 1.3
+// on Thu Jan 06 13:18:28 CET 2022
+
+.package ecinepackage {
+	.aid 0x1:0x2:0x3:0x4:0x5:0x6:0x7:0x8:0x9:0x0;
+	.version 1.0;
+
+	.imports {
+		0xA0:0x0:0x0:0x0:0x62:0x0:0x1 1.0;		//java/lang
+		0xA0:0x0:0x0:0x0:0x62:0x1:0x1 1.3;		//javacard/framework
+	}
+
+	.applet {
+		0x1:0x2:0x3:0x4:0x5:0x6:0x7:0x8:0x9:0x0:0x0 eCine;
+	}
+
+	.constantPool {
+		// 0
+		instanceFieldRef eCine eCine$Screening/this$0;
+		// 1
+		staticMethodRef 0.0.0()V;		// java/lang/Object.<init>()V
+		// 2
+		staticMethodRef 1.3.0()V;		// javacard/framework/Applet.<init>()V
+		// 3
+		staticFieldRef byte eCine/balance;
+		// 4
+		classRef eCine;
+		// 5
+		staticMethodRef eCine/<init>()V;
+		// 6
+		virtualMethodRef 1.3.1()V;		// register()V
+		// 7
+		virtualMethodRef 1.10.1()[B;		// getBuffer()[B
+		// 8
+		virtualMethodRef 1.3.3()Z;		// selectingApplet()Z
+		// 9
+		staticMethodRef 1.7.1(S)V;		// javacard/framework/ISOException.throwIt(S)V
+		// 10
+		virtualMethodRef 1.10.8(SS)V;		// setOutgoingAndSend(SS)V
+		// 11
+		virtualMethodRef 1.10.6()S;		// setIncomingAndReceive()S
+	}
+
+	.class  eCine$Screening extends 0.0 {		// extends java/lang/Object
+
+		.fields {
+			final eCine this$0 0;		// Lecinepackage/eCine;
+			private byte day 1;		// B
+			private byte month 2;		// B
+			private byte year 3;		// B
+			private short time 4;		// S
+			private byte tdDay 5;		// B
+			private byte tdMonth 6;		// B
+			private byte tdYear 7;		// B
+			private short tdTime 8;		// S
+			private short IDMovie 9;		// S
+			private byte price 10;		// B
+			private byte duration 11;		// B
+		}
+
+		.publicMethodTable 1 {
+			equals(Ljava/lang/Object;)Z;
+		}
+
+		.packageMethodTable 0 {
+		}
+
+		.method private <init>(Lecinepackage/eCine;)V {
+			.stack 2;
+			.locals 0;
+
+				L0:	aload_0;
+					invokespecial 1;		// java/lang/Object.<init>()V
+					aload_0;
+					aload_1;
+					putfield_a 0;		// reference ecinepackage/eCine$Screening.this$0
+					return;
+		}
+
+	}
+
+	.class public eCine 0 extends 1.3 {		// extends javacard/framework/Applet
+
+		.fields {
+			public static final byte CLA_ECINE = 37;		// B
+			public static final byte INS_BUY_TICKET = 0;		// B
+			public static final byte INS_GET_BALANCE = 1;		// B
+			public static final byte INS_REFUND_BALANCE = 2;		// B
+			public static final byte INS_UNLOCK_CARD = 3;		// B
+			public static final byte INS_ARCHIVE_TICKET = 4;		// B
+			public static final byte SW1_OK = 10;		// B
+			public static final byte SW2_PURCHASE_OK = 1;		// B
+			public static final byte SW1_ERROR = 14;		// B
+			public static final byte SW2_INSUFFICIENT_BALANCE = 1;		// B
+			public static final byte SW2_TICKET_MAX_AMOUNT_REACHED = 2;		// B
+			private static byte balance;		// B
+			private static byte rewards;		// B
+			private static 1.9 userPIN;		// Ljavacard/framework/OwnerPIN;
+			private static 1.9 adminPUK;		// Ljavacard/framework/OwnerPIN;
+		}
+
+		.publicMethodTable 7 {
+			equals(Ljava/lang/Object;)Z;
+			register()V;
+			register([BSB)V;
+			selectingApplet()Z;
+			deselect()V;
+			getShareableInterfaceObject(Ljavacard/framework/AID;B)Ljavacard/framework/Shareable;;
+			select()Z;
+			process(Ljavacard/framework/APDU;)V;
+		}
+
+		.packageMethodTable 0 {
+		}
+
+		.method private <init>()V {
+			.stack 1;
+			.locals 0;
+
+				L0:	aload_0;
+					invokespecial 2;		// javacard/framework/Applet.<init>()V
+					bspush -12;
+					putstatic_b 3;		// byte ecinepackage/eCine.balance
+					return;
+		}
+
+		.method public static install([BSB)V 0 {
+			.stack 2;
+			.locals 0;
+
+				L0:	new 4;		// ecinepackage/eCine
+					dup;
+					invokespecial 5;		// ecinepackage/eCine.<init>()V
+					invokevirtual 6;		// register()V
+					return;
+		}
+
+		.method public process(Ljavacard/framework/APDU;)V 7 {
+			.stack 3;
+			.locals 1;
+
+			.descriptor	Ljavacard/framework/APDU;	1.10;
+
+				L0:	aload_1;
+					invokevirtual 7;		// getBuffer()[B
+					astore_2;
+					aload_0;
+					invokevirtual 8;		// selectingApplet()Z
+					ifeq L2;
+				L1:	return;
+				L2:	aload_2;
+					sconst_0;
+					baload;
+					bspush 37;
+					if_scmpeq L4;
+				L3:	sspush 28160;
+					invokestatic 9;		// javacard/framework/ISOException.throwIt(S)V
+				L4:	aload_2;
+					sconst_1;
+					baload;
+					stableswitch L10 0 4 L5 L6 L7 L8 L9;
+				L5:	goto L11;
+				L6:	aload_2;
+					sconst_0;
+					getstatic_b 3;		// byte ecinepackage/eCine.balance
+					bastore;
+					aload_1;
+					sconst_0;
+					sconst_1;
+					invokevirtual 10;		// setOutgoingAndSend(SS)V
+					goto L11;
+				L7:	aload_2;
+					sconst_0;
+					getstatic_b 3;		// byte ecinepackage/eCine.balance
+					bastore;
+					aload_1;
+					sconst_0;
+					sconst_1;
+					invokevirtual 10;		// setOutgoingAndSend(SS)V
+					goto L11;
+				L8:	aload_1;
+					invokevirtual 11;		// setIncomingAndReceive()S
+					pop;
+					goto L11;
+				L9:	aload_1;
+					invokevirtual 11;		// setIncomingAndReceive()S
+					pop;
+					goto L11;
+				L10:	sspush 27904;
+					invokestatic 9;		// javacard/framework/ISOException.throwIt(S)V
+				L11:	return;
+		}
+
+	}
+
+}
