@@ -19,22 +19,48 @@ import ecinepackage.eCine;
 import ecinepackage.Screening;
 
 public class eCineClient {
-	public static void main(String[] args) throws IOException,
-			CadTransportException {
+	
+	public static Map<Integer, AbstractMap.SimpleEntry<String, Screening>> initMovies() {
 		/* Movie library */
-
 		Map<Integer, AbstractMap.SimpleEntry<String, Screening>> screenings = new HashMap<Integer, AbstractMap.SimpleEntry<String, Screening>>();
-		screenings.put(0, new AbstractMap.SimpleEntry<String, Screening>(
-				"The Lord of the Rings",
-				new Screening((short) 1, (byte) 10, (byte) 144, (byte) 10,
-						(byte) 1, (byte) 22, (short) 120)));
+		// 1 Lord of The Rings 10EUR 720min 10/01/2022 02:00
 		screenings.put(1, new AbstractMap.SimpleEntry<String, Screening>(
+				"The Lord of the Rings",
+				new Screening((short) 1, (byte) 10, (byte) 127, (byte) 10,
+						(byte) 1, (byte) 22, (short) 120)));
+		// 2 Matrix 5EUR 100min 05/07/2022 20:00
+		screenings.put(2, new AbstractMap.SimpleEntry<String, Screening>(
 				"Matrix", new Screening((short) 2, (byte) 5, (byte) 20,
 						(byte) 5, (byte) 7, (byte) 22, (short) 1200)));
-		screenings.put(2, new AbstractMap.SimpleEntry<String, Screening>(
+		// 3 La La Land 6EUR 105min 10/01/2022 20:00
+		screenings.put(3, new AbstractMap.SimpleEntry<String, Screening>(
 				"La La Land", new Screening((short) 3, (byte) 6, (byte) 21,
 						(byte) 10, (byte) 1, (byte) 22, (short) 1200)));
+		// 4 Cars 5EUR 110min 11/01/2022 19:00
+		screenings.put(4, new AbstractMap.SimpleEntry<String, Screening>(
+				"Cars", new Screening((short) 4, (byte) 5, (byte) 19,
+						(byte) 11, (byte) 1, (byte) 22, (short) 1140)));
+		// 5 Avengers 12EUR 143min 12/01/2022 20:00
+		screenings.put(5, new AbstractMap.SimpleEntry<String, Screening>(
+				"Avengers", new Screening((short) 5, (byte) 12, (byte) 29,
+						(byte) 12, (byte) 1, (byte) 22, (short) 1200)));
+		// 6 Love Actually 5EUR 120min 11/01/2022 21:00
+		screenings.put(6, new AbstractMap.SimpleEntry<String, Screening>(
+				"Love Actually", new Screening((short) 6, (byte) 5, (byte) 24,
+						(byte) 11, (byte) 1, (byte) 22, (short) 1260)));
+		// 7 Shrek 5EUR 110min 13/01/2022 20:00
+		screenings.put(7, new AbstractMap.SimpleEntry<String, Screening>(
+				"Shrek", new Screening((short) 4, (byte) 25, (byte) 24,
+						(byte) 13, (byte) 1, (byte) 22, (short) 1200)));
+	
+		return screenings;
+	}
 
+	public static void main(String[] args) throws IOException,
+			CadTransportException {
+		
+		Map<Integer, AbstractMap.SimpleEntry<String, Screening>> screenings = initMovies();
+		
 		/* Connexion a la Javacard */
 		CadT1Client cad;
 		Socket sckCarte;
@@ -158,10 +184,11 @@ public class eCineClient {
 					pin = readPin();
 					apdu.setDataIn(pin);
 					cad.exchangeApdu(apdu);
-					
+
 					if (manageError(apdu.getStatus())) {
 						apdu.command[Apdu.INS] = eCine.INS_BUY_TICKET;
-						for (Entry<Integer, SimpleEntry<String, Screening>> item : screenings.entrySet()) {
+						for (Entry<Integer, SimpleEntry<String, Screening>> item : screenings
+								.entrySet()) {
 							System.out.println("For "
 									+ item.getValue().getKey() + " press "
 									+ item.getKey());
@@ -244,19 +271,20 @@ public class eCineClient {
 		scan.nextLine();
 		return pin;
 	}
-	
+
 	public static boolean manageError(int status) {
 		switch (status) {
 		case 0x9000:
 			System.out.println("Ok");
 			return true;
-		case eCine.SW2_CARD_LOCKED :
-			System.out.println("Your card is locked. PLease call an admin to unlock it.");
+		case eCine.SW2_CARD_LOCKED:
+			System.out
+					.println("Your card is locked. PLease call an admin to unlock it.");
 			break;
-		case eCine.SW2_VERIFICATION_FAILED :
+		case eCine.SW2_VERIFICATION_FAILED:
 			System.out.println("Invalid PIN. Please try again");
 			break;
-		default :
+		default:
 			System.out.println("Error : " + status);
 			break;
 		}
