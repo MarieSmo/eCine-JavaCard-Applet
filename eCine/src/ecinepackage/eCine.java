@@ -25,18 +25,23 @@ public class eCine extends Applet {
 	public static final byte SW2_TICKET_MAX_AMOUNT_REACHED = (byte) 0x02;
 	public static final byte SW2_VERIFICATION_FAILED = (byte) 0x03;
 	public static final byte SW2_CARD_LOCKED = (byte) 0x04;
+	public static final byte SW2_INVALID_REFUND_AMOUNT = (byte) 0x05;
+	public static final byte SW2_EXCEED_MAXIMUM_BALANCE = (byte) 0x06;
 
 	
 	private static byte balance;
 	private static byte rewards;
 	private static OwnerPIN userPIN;
 	private static OwnerPIN adminPUK;
+	
+	public static final byte MAX_REFUND_AMOUNT = (byte) 50;
+	public static final byte MAX_BALANCE_AMOUNT = (byte) 100;
 
 	private static Screening[] screenings;
 	private static Screening immediateScreening;
 
 	private eCine() {
-		balance = (byte) 50;
+		balance = (byte) 0;
 		screenings = new Screening[]{null, null, null, null, null};
 
 		byte[] pin = { 1, 2, 3, 4 };
@@ -68,7 +73,7 @@ public class eCine extends Applet {
 			apdu.setOutgoingAndSend((short) 0, (short) 1);
 			break;
 		case INS_REFUND_BALANCE:
-
+			refundBalance(apdu);
 			break;
 		case INS_UNLOCK_CARD:
 			apdu.setIncomingAndReceive();
@@ -130,9 +135,29 @@ public class eCine extends Applet {
 
 		Screening newTicket = Screening.fromByteArray(buffer,
 				ISO7816.OFFSET_CDATA);
+		
+		if ( ( balance - newTicket.getPrice()) <= 0) ISOException.throwIt(SW2_INSUFFICIENT_BALANCE);
+		
 		addScreening(newTicket);
-
 		balance = (byte) (balance - newTicket.getPrice());
+	}
+	
+	private void refundBalance(APDU apdu) {
+		byte[] buffer = apdu.getBuffer();
+		byte numBytes = buffer[ISO7816.OFFSET_LC];
+		byte byteRead = (byte) (apdu.setIncomingAndReceive());
+
+		if (byteRead != 1)
+			ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
+
+	    byte refund = buffer[ISO7816.OFFSET_CDATA];
+	   
+	    if ((refund > MAX_REFUND_AMOUNT) || ( refund < 0 ) )
+	      ISOException.throwIt(SW2_INVALID_REFUND_AMOUNT);
+	   
+	    if ( ( balance + refund) > MAX_BALANCE_AMOUNT) ISOException.throwIt(SW2_EXCEED_MAXIMUM_BALANCE);
+
+	    balance = (byte)(balance + refund);
 	}
 
 }

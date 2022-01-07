@@ -130,13 +130,15 @@ public class eCineClient {
 			System.out.println();
 			System.out.println("0 - Buy a ticket");
 			System.out.println("1 - Display the balance");
-			System.out.println("3 - Decrementer le compteur");
-			System.out.println("4 - Reinitialiser le compteur");
-			System.out.println("5 - Quitter");
+			System.out.println("2 - Refund your balance");
+			System.out.println("3 - Unlock your card");
+			System.out.println("4 - Quit");
 			System.out.println();
 			System.out.println("Votre choix ?");
 
 			Scanner scan = new Scanner(System.in);
+			byte[] pin;
+			byte[] data;
 			try {
 
 				int choix = Integer.parseInt(scan.nextLine());
@@ -153,7 +155,7 @@ public class eCineClient {
 				case 0:
 					apdu.command[Apdu.INS] = eCine.INS_VERIFY_PIN;
 					System.out.println("Please enter your PIN:");
-					byte[] pin = readPin();
+					pin = readPin();
 					apdu.setDataIn(pin);
 					cad.exchangeApdu(apdu);
 					
@@ -165,7 +167,8 @@ public class eCineClient {
 									+ item.getKey());
 						}
 						int screeningChoice = Integer.parseInt(scan.nextLine());
-						byte[] data = screenings.get(screeningChoice).getValue().toByteArray();
+						data = new byte[9];
+						data = screenings.get(screeningChoice).getValue().toByteArray();
 
 						apdu.setDataIn(data);
 						cad.exchangeApdu(apdu);
@@ -186,13 +189,21 @@ public class eCineClient {
 					break;
 
 				case 2:
-					apdu.command[Apdu.INS] = eCine.INS_REFUND_BALANCE;
+					apdu.command[Apdu.INS] = eCine.INS_VERIFY_PIN;
+					System.out.println("Please enter your PIN:");
+					pin = readPin();
+					apdu.setDataIn(pin);
 					cad.exchangeApdu(apdu);
-					if (apdu.getStatus() != 0x9000) {
-						System.out
-								.println("Erreur : status word different de 0x9000");
-					} else {
-						System.out.println("OK");
+					
+					if (manageError(apdu.getStatus())) {
+						apdu.command[Apdu.INS] = eCine.INS_REFUND_BALANCE;
+						System.out.println("Enter the amount you want to credit:");
+						int refund = Integer.parseInt(scan.nextLine()); 
+						data = new byte[1];
+						data[0] = (byte) refund;
+						apdu.setDataIn(data);
+						cad.exchangeApdu(apdu);
+						manageError(apdu.getStatus());
 					}
 					break;
 
