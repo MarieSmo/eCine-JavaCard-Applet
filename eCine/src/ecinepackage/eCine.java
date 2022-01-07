@@ -14,7 +14,7 @@ public class eCine extends Applet {
 	public static final byte INS_GET_BALANCE = (byte) 0x01;
 	public static final byte INS_REFUND_BALANCE = (byte) 0x02;
 	public static final byte INS_UNLOCK_CARD = (byte) 0x03;
-	public static final byte INS_ARCHIVE_TICKET = (byte) 0x04;
+	public static final byte INS_ARCHIVE_TICKETS = (byte) 0x04;
 	public static final byte INS_VERIFY_PIN = (byte) 0x05;
 
 	/* Error return value */
@@ -91,7 +91,7 @@ public class eCine extends Applet {
 				unlockCard(apdu);
 			}
 			break;
-		case INS_ARCHIVE_TICKET:
+		case INS_ARCHIVE_TICKETS:
 			apdu.setIncomingAndReceive();
 			// compteur = buffer[ISO7816.OFFSET_CDATA];
 			break;

@@ -55,6 +55,12 @@ public class eCineClient {
 	
 		return screenings;
 	}
+	
+	//actual date, normally updated automatically
+	static byte day = (byte) 7;
+	static byte month = (byte) 1;
+	static byte year = (byte) 22;
+	static short time = 890;
 
 	public static void main(String[] args) throws IOException,
 			CadTransportException {
@@ -166,6 +172,14 @@ public class eCineClient {
 			byte[] pin;
 			byte[] data;
 			try {
+				//archivage des tickets
+				apdu.command[Apdu.INS] = eCine.INS_ARCHIVE_TICKETS;
+				data = new byte[4];
+				data[0] = day;
+				data[1] = month;
+				
+				cad.exchangeApdu(apdu);
+				manageError(apdu.getStatus());
 
 				int choix = Integer.parseInt(scan.nextLine());
 				while (!(choix >= 0 && choix <= 5)) {
@@ -240,7 +254,7 @@ public class eCineClient {
 					break;
 
 				case 4:
-					apdu.command[Apdu.INS] = eCine.INS_ARCHIVE_TICKET;
+					apdu.command[Apdu.INS] = eCine.INS_ARCHIVE_TICKETS;
 
 					break;
 
@@ -270,6 +284,16 @@ public class eCineClient {
 		pin[3] = (byte) scan.nextInt();
 		scan.nextLine();
 		return pin;
+	}
+	
+	public static byte[] dateToArg() {
+		byte[] data = new byte[5];
+		data[0] = day;
+		data[1] = month;
+		data[2] = year;
+		data[3] = (byte) (time >> 8);
+		data[4] = (byte) (time & 0xFF);
+		return data;		
 	}
 
 	public static boolean manageError(int status) {
