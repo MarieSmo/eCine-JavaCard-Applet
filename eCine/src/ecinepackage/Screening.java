@@ -4,7 +4,7 @@ public class Screening {
 	private short IDMovie;
 	private byte price;
 	private byte duration;
-	
+
 	private byte day, month, year;
 	private short time;
 	private byte tdDay, tdMonth, tdYear;
@@ -34,9 +34,31 @@ public class Screening {
 		return IDMovie;
 	}
 	
-	public short getPrice() {
+	public byte getPrice() {
 		return price;
 	}
+	
+	public byte getDuration() {
+		return duration;
+	}
+
+	public short getTime() {
+		return time;
+	}
+	
+	
+	public byte getDay() {
+		return day;
+	}
+
+	public byte getMonth() {
+		return month;
+	}
+
+	public byte getYear() {
+		return year;
+	}
+
 
 	public byte[] toByteArray() {
 		byte[] array = new byte[9];

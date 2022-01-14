@@ -19,7 +19,7 @@ import ecinepackage.eCine;
 import ecinepackage.Screening;
 
 public class eCineClient {
-	
+
 	public static Map<Integer, AbstractMap.SimpleEntry<String, Screening>> initMovies() {
 		/* Movie library */
 		Map<Integer, AbstractMap.SimpleEntry<String, Screening>> screenings = new HashMap<Integer, AbstractMap.SimpleEntry<String, Screening>>();
@@ -52,8 +52,21 @@ public class eCineClient {
 		screenings.put(7, new AbstractMap.SimpleEntry<String, Screening>(
 				"Shrek", new Screening((short) 4, (byte) 25, (byte) 24,
 						(byte) 13, (byte) 1, (byte) 22, (short) 1200)));
-	
+
 		return screenings;
+	}
+
+	public static void dsplayScreenings(
+			Map<Integer, AbstractMap.SimpleEntry<String, Screening>> screenings) {
+		System.out.println(String.format("Nb: € %-25s Duration Date","Movie"));
+
+		for (Entry<Integer, SimpleEntry<String, Screening>> item : screenings
+				.entrySet()) {
+			Integer index = item.getKey();
+			String name = item.getValue().getKey();
+			Screening s = item.getValue().getValue();
+			System.out.println(String.format("%s: %02d %-25s %03dMins %02d/%02d/20%2d",index, s.getPrice(),name, s.getDuration() * 5, s.getDay(), s.getMonth(), s.getYear()));
+		}
 	}
 
 	public static void main(String[] args) throws IOException,
@@ -151,7 +164,7 @@ public class eCineClient {
 		boolean fin = false;
 		while (!fin) {
 			System.out.println();
-			System.out.println("Application cliente Javacard");
+			System.out.println("POG Cinema");
 			System.out.println("----------------------------");
 			System.out.println();
 			System.out.println("0 - Buy a ticket");
@@ -160,7 +173,7 @@ public class eCineClient {
 			System.out.println("3 - Unlock your card");
 			System.out.println("4 - Quit");
 			System.out.println();
-			System.out.println("Votre choix ?");
+			System.out.println("Type Your Choice ?");
 
 			Scanner scan = new Scanner(System.in);
 			byte[] pin;
@@ -179,20 +192,10 @@ public class eCineClient {
 
 				switch (choix) {
 				case 0:
-					apdu.command[Apdu.INS] = eCine.INS_VERIFY_PIN;
-					System.out.println("Please enter your PIN:");
-					pin = readPin();
-					apdu.setDataIn(pin);
-					cad.exchangeApdu(apdu);
-
-					if (manageError(apdu.getStatus())) {
+				
+					if (manageError(verifyPin(apdu, cad))) {
 						apdu.command[Apdu.INS] = eCine.INS_BUY_TICKET;
-						for (Entry<Integer, SimpleEntry<String, Screening>> item : screenings
-								.entrySet()) {
-							System.out.println("For "
-									+ item.getValue().getKey() + " press "
-									+ item.getKey());
-						}
+						dsplayScreenings(screenings);
 						int screeningChoice = Integer.parseInt(scan.nextLine());
 						data = new byte[9];
 						data = screenings.get(screeningChoice).getValue().toByteArray();
@@ -216,13 +219,7 @@ public class eCineClient {
 					break;
 
 				case 2:
-					apdu.command[Apdu.INS] = eCine.INS_VERIFY_PIN;
-					System.out.println("Please enter your PIN:");
-					pin = readPin();
-					apdu.setDataIn(pin);
-					cad.exchangeApdu(apdu);
-					
-					if (manageError(apdu.getStatus())) {
+					if (manageError(verifyPin(apdu, cad))) {
 						apdu.command[Apdu.INS] = eCine.INS_REFUND_BALANCE;
 						System.out.println("Enter the amount you want to credit:");
 						int refund = Integer.parseInt(scan.nextLine()); 
@@ -257,9 +254,11 @@ public class eCineClient {
 					fin = true;
 					break;
 				}
+			} catch (IncorrectPinFormatException ignored) {
+				System.err.println("Incorrect Pin Format, aborting");
 			} catch (Exception e) {
 				e.printStackTrace();
-			}
+			} 
 		}
 		/* Mise hors tension de la carte */
 		try {
@@ -270,15 +269,27 @@ public class eCineClient {
 		}
 	}
 
-	public static byte[] readPin() {
+	public static byte[] readPin() throws IncorrectPinFormatException {
 		Scanner scan = new Scanner(System.in).useDelimiter("");
 		byte[] pin = new byte[4];
-		pin[0] = (byte) scan.nextInt();
-		pin[1] = (byte) scan.nextInt();
-		pin[2] = (byte) scan.nextInt();
-		pin[3] = (byte) scan.nextInt();
+		for(int i=0; i < 4; i++) {
+			if(scan.hasNextInt())
+				pin[i] = (byte) scan.nextInt();
+			else 
+				throw new IncorrectPinFormatException();
+		}
 		scan.nextLine();
 		return pin;
+	}
+	
+	public static int verifyPin(Apdu apdu, CadT1Client cad) throws IOException, CadTransportException, IncorrectPinFormatException {
+		apdu.command[Apdu.INS] = eCine.INS_VERIFY_PIN;
+		System.out.println("Please enter your PIN:");
+		byte[] pin = readPin();
+		apdu.setDataIn(pin);
+		cad.exchangeApdu(apdu);
+		return apdu.getStatus();
+		
 	}
 
 	public static boolean manageError(int status) {
@@ -287,14 +298,14 @@ public class eCineClient {
 			System.out.println("Ok");
 			return true;
 		case eCine.SW2_CARD_LOCKED:
-			System.out
+			System.err
 					.println("Your card is locked. PLease call an admin to unlock it.");
 			break;
 		case eCine.SW2_VERIFICATION_FAILED:
-			System.out.println("Invalid PIN. Please try again");
+			System.err.println("Invalid PIN. Please try again");
 			break;
 		default:
-			System.out.println("Error : " + status);
+			System.err.println("Error : " + status);
 			break;
 		}
 		return false;
