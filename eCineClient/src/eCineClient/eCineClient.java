@@ -62,7 +62,7 @@ public class eCineClient {
 	static byte year = (byte) 22;
 	static short time = 890;
 
-	public static void dsplayScreenings(
+	public static void displayScreenings(
 			Map<Integer, AbstractMap.SimpleEntry<String, Screening>> screenings) {
 		System.out.println(String.format("Nb: � %-25s Duration Date","Movie"));
 
@@ -195,9 +195,6 @@ public class eCineClient {
 				manageError(apdu.getStatus());
 
 				int choix = Integer.parseInt(scan.nextLine());
-				while (!(choix >= 0 && choix <= 5)) {
-					choix = Integer.parseInt(scan.nextLine());
-				}
 
 				apdu = new Apdu();
 				apdu.command[Apdu.CLA] = eCine.CLA_ECINE;
@@ -209,11 +206,10 @@ public class eCineClient {
 				
 					if (manageError(verifyPin(apdu, cad))) {
 						apdu.command[Apdu.INS] = eCine.INS_BUY_TICKET;
-						dsplayScreenings(screenings);
+						displayScreenings(screenings);
 						int screeningChoice = Integer.parseInt(scan.nextLine());
 						data = new byte[9];
 						data = screenings.get(screeningChoice).getValue().toByteArray();
-
 						apdu.setDataIn(data);
 						cad.exchangeApdu(apdu);
 						manageError(apdu.getStatus());
@@ -223,7 +219,11 @@ public class eCineClient {
 				case 1:
 					apdu.command[Apdu.INS] = eCine.INS_GET_BALANCE;
 					cad.exchangeApdu(apdu);
-					if (manageError(apdu.getStatus())) {
+					if (apdu.getStatus() != 0x9000) {
+						System.out.println(apdu.getStatus());
+						System.out
+								.println("Erreur : status word different de 0x9000");
+					} else {
 						System.out.println("Balance : " + apdu.dataOut[0]);
 					}
 					break;
@@ -258,9 +258,14 @@ public class eCineClient {
 				case 5:
 					fin = true;
 					break;
+				default :
+					throw new InvalidSelectionException();
 				}
-			} catch (IncorrectPinFormatException ignored) {
-				System.err.println("Incorrect Pin Format, aborting");
+			} catch(InvalidSelectionException | NumberFormatException ignored) {
+				System.err.println("Invalid Selection");
+			}
+			catch (IncorrectPinFormatException ignored) {
+				System.err.println("Incorrect Pin Format, Returning you to the Main Menu");
 			} catch (Exception e) {
 				e.printStackTrace();
 			} 
@@ -309,7 +314,7 @@ public class eCineClient {
 	public static boolean manageError(int status) {
 		switch (status) {
 		case 0x9000:
-			System.out.println("Ok");
+			System.out.println("Operation Successful");
 			return true;
 		case eCine.SW2_CARD_LOCKED:
 			System.err
