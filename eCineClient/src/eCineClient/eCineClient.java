@@ -11,10 +11,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Scanner;
 
+
 import com.sun.javacard.apduio.Apdu;
 import com.sun.javacard.apduio.CadT1Client;
 import com.sun.javacard.apduio.CadTransportException;
 
+import ecinepackage.Logger;
+import ecinepackage.Purchase;
 import ecinepackage.eCine;
 import ecinepackage.Screening;
 
@@ -38,7 +41,7 @@ public class eCineClient {
 						(byte) 10, (byte) 1, (byte) 22, (short) 1200)));
 		// 4 Cars 5EUR 110min 11/01/2022 19:00
 		screenings.put(4, new AbstractMap.SimpleEntry<String, Screening>(
-				"Cars", new Screening((short) 4, (byte) 5, (byte) 19,
+				"Cars", new Screening((short) 4, (byte) 5, (byte) 24,
 						(byte) 11, (byte) 1, (byte) 22, (short) 1140)));
 		// 5 Avengers 12EUR 143min 12/01/2022 20:00
 		screenings.put(5, new AbstractMap.SimpleEntry<String, Screening>(
@@ -50,36 +53,52 @@ public class eCineClient {
 						(byte) 11, (byte) 1, (byte) 22, (short) 1260)));
 		// 7 Shrek 5EUR 110min 13/01/2022 20:00
 		screenings.put(7, new AbstractMap.SimpleEntry<String, Screening>(
-				"Shrek", new Screening((short) 4, (byte) 25, (byte) 24,
+				"Shrek", new Screening((short) 7, (byte) 25, (byte) 24,
 						(byte) 13, (byte) 1, (byte) 22, (short) 1200)));
+		// 8 Cars 2 5EUR 120min 11/01/2022 20:55
+		screenings.put(8, new AbstractMap.SimpleEntry<String, Screening>(
+				"Cars 2", new Screening((short) 8, (byte) 5, (byte) 24,
+						(byte) 11, (byte) 1, (byte) 22, (short) 1260)));
+		// 9 Cars 3 5EUR 120min 11/01/2022 17:05
+		screenings.put(9, new AbstractMap.SimpleEntry<String, Screening>(
+				"Cars 3", new Screening((short) 9, (byte) 5, (byte) 24,
+						(byte) 11, (byte) 1, (byte) 22, (short) 1025)));
+
 
 		return screenings;
 	}
-	
-	//actual date, normally updated automatically
-	static byte day = (byte) 7;
+
+	// actual date, normally updated automatically
+	static byte day = (byte) 10;
 	static byte month = (byte) 1;
 	static byte year = (byte) 22;
-	static short time = 890;
+	static short time = 150;
 
 	public static void displayScreenings(
 			Map<Integer, AbstractMap.SimpleEntry<String, Screening>> screenings) {
-		System.out.println(String.format("Nb: � %-25s Duration Date","Movie"));
+		System.out.println(String
+				.format("Nb: � %-25s Duration Date", "Movie"));
 
 		for (Entry<Integer, SimpleEntry<String, Screening>> item : screenings
 				.entrySet()) {
 			Integer index = item.getKey();
 			String name = item.getValue().getKey();
 			Screening s = item.getValue().getValue();
-			System.out.println(String.format("%s: %02d %-25s %03dMins %02d/%02d/20%2d",index, s.getPrice(),name, s.getDuration() * 5, s.getDay(), s.getMonth(), s.getYear()));
+			System.out.println(String.format(
+					"%s: %02d %-25s %03dMins %02d:%02d %02d/%02d/20%2d", index,
+					s.getPrice(), name, s.getDuration() * 5, 
+					s.getTime()/60,
+					s.getTime()%60,
+					s.getDay(),
+					s.getMonth(), s.getYear()));
 		}
 	}
 
 	public static void main(String[] args) throws IOException,
 			CadTransportException {
-		
+
 		Map<Integer, AbstractMap.SimpleEntry<String, Screening>> screenings = initMovies();
-		
+
 		/* Connexion a la Javacard */
 		CadT1Client cad;
 		Socket sckCarte;
@@ -166,78 +185,70 @@ public class eCineClient {
 			System.exit(1);
 		}
 
+		archiveTickets(apdu, cad);
 		/* Menu principal */
 		boolean fin = false;
 		while (!fin) {
-			System.out.println();
-			System.out.println("POG Cinema");
-			System.out.println("----------------------------");
-			System.out.println();
-			System.out.println("0 - Buy a ticket");
-			System.out.println("1 - Display the balance");
-			System.out.println("2 - Refund your balance");
-			System.out.println("3 - Unlock your card");
-			System.out.println("4 - Quit");
-			System.out.println();
-			System.out.println("Type Your Choice ?");
-
 			Scanner scan = new Scanner(System.in);
 			byte[] pin;
 			byte[] data;
 			try {
-				//archivage des tickets
-				apdu.command[Apdu.INS] = eCine.INS_ARCHIVE_TICKETS;
-				data = new byte[4];
-				data[0] = day;
-				data[1] = month;
-				
-				cad.exchangeApdu(apdu);
-				manageError(apdu.getStatus());
 
-				int choix = Integer.parseInt(scan.nextLine());
-
+				// Init Connection
 				apdu = new Apdu();
 				apdu.command[Apdu.CLA] = eCine.CLA_ECINE;
 				apdu.command[Apdu.P1] = 0x04;
 				apdu.command[Apdu.P2] = 0x00;
 
+				// Demande De Selection
+				System.out.println();
+				System.out.println("POG Cinema");
+				System.out.println("----------------------------");
+				System.out.println();
+				System.out.println("0 - Buy a ticket");
+				System.out.println("1 - Display the balance");
+				System.out.println("2 - Refund your balance");
+				System.out.println("3 - Unlock your card");
+				System.out.println("4 - Archive");
+				System.out.println("5 - Get Logs");
+				System.out.println("6 - Quit");
+				System.out.println();
+				System.out.println("Type Your Choice ?");
+
+				int choix = Integer.parseInt(scan.nextLine());
+
 				switch (choix) {
 				case 0:
-				
-					if (manageError(verifyPin(apdu, cad))) {
+					if (manageError(verifyPin(apdu, cad), false)) {
 						apdu.command[Apdu.INS] = eCine.INS_BUY_TICKET;
 						displayScreenings(screenings);
 						int screeningChoice = Integer.parseInt(scan.nextLine());
-						data = new byte[9];
-						data = screenings.get(screeningChoice).getValue().toByteArray();
+						data = new byte[Purchase.ELEMENT_COUNT];
+						data = (new Purchase(screenings.get(screeningChoice).getValue(), day, month, year, time )).toByteArray();
 						apdu.setDataIn(data);
 						cad.exchangeApdu(apdu);
-						manageError(apdu.getStatus());
+						manageError(apdu.getStatus(), true);
 					}
 					break;
 
 				case 1:
 					apdu.command[Apdu.INS] = eCine.INS_GET_BALANCE;
 					cad.exchangeApdu(apdu);
-					if (apdu.getStatus() != 0x9000) {
-						System.out.println(apdu.getStatus());
-						System.out
-								.println("Erreur : status word different de 0x9000");
-					} else {
+					if (manageError(apdu.getStatus(), false)) {
 						System.out.println("Balance : " + apdu.dataOut[0]);
 					}
 					break;
-
 				case 2:
-					if (manageError(verifyPin(apdu, cad))) {
+					if (manageError(verifyPin(apdu, cad), false)) {
 						apdu.command[Apdu.INS] = eCine.INS_REFUND_BALANCE;
-						System.out.println("Enter the amount you want to credit:");
-						int refund = Integer.parseInt(scan.nextLine()); 
+						System.out
+								.println("Enter the amount you want to credit:");
+						int refund = Integer.parseInt(scan.nextLine());
 						data = new byte[1];
 						data[0] = (byte) refund;
 						apdu.setDataIn(data);
 						cad.exchangeApdu(apdu);
-						manageError(apdu.getStatus());
+						manageError(apdu.getStatus(), false);
 					}
 					break;
 
@@ -247,28 +258,33 @@ public class eCineClient {
 					pin = readPin();
 					apdu.setDataIn(pin);
 					cad.exchangeApdu(apdu);
-					manageError(apdu.getStatus());
+					manageError(apdu.getStatus(), false);
 					break;
 
 				case 4:
 					apdu.command[Apdu.INS] = eCine.INS_ARCHIVE_TICKETS;
 
 					break;
-
 				case 5:
+					apdu.command[Apdu.INS] = eCine.INS_GET_LOGS;
+					cad.exchangeApdu(apdu);
+					displayLogs(apdu.dataOut);
+					manageError(apdu.getStatus(), false);
+					break;
+				case 6:
 					fin = true;
 					break;
-				default :
+				default:
 					throw new InvalidSelectionException();
 				}
-			} catch(InvalidSelectionException | NumberFormatException ignored) {
+			} catch (InvalidSelectionException | NumberFormatException ignored) {
 				System.err.println("Invalid Selection");
-			}
-			catch (IncorrectPinFormatException ignored) {
-				System.err.println("Incorrect Pin Format, Returning you to the Main Menu");
+			} catch (IncorrectPinFormatException ignored) {
+				System.err
+						.println("Incorrect Pin Format, Returning you to the Main Menu");
 			} catch (Exception e) {
 				e.printStackTrace();
-			} 
+			}
 		}
 		/* Mise hors tension de la carte */
 		try {
@@ -278,21 +294,60 @@ public class eCineClient {
 			return;
 		}
 	}
+	
+	public static void displayLogs(byte[] data){
+		for(int i=0; i < data.length ; i+=Logger.MESSAGE_SIZE) {
+			switch (data[i]) {
+			case eCine.INS_BUY_TICKET:
+				System.out.printf("Purchase: ID:%02d Price:%02d PaymentMethod:%02d\n", (short) (data[i+1] << 8 | data[i+2] & 0xFF) , data[i+3], data[i+4]);
+				break;
+			case eCine.INS_REFUND_BALANCE:
+				System.out.printf("TopUp   : Amount:%02d newBalance:%02d\n", data[i+1] ,data[i+2]);
+				break;
+			default:
+				System.out.printf("Unknown : 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X\n", data[i], data[i+1], data[i+2], data[i+3], data[i+4], data[i+5]);
+			}
+		}
+	}
+
+	public static boolean archiveTickets(Apdu apdu, CadT1Client cad) {
+		// Init Connection
+		try {
+			apdu = new Apdu();
+			apdu.command[Apdu.CLA] = eCine.CLA_ECINE;
+			apdu.command[Apdu.P1] = 0x04;
+			apdu.command[Apdu.P2] = 0x00;
+
+			// archivage des tickets
+			apdu.command[Apdu.INS] = eCine.INS_ARCHIVE_TICKETS;
+			byte[] data = new byte[4];
+			data[0] = day;
+			data[1] = month;
+			cad.exchangeApdu(apdu);
+			if (manageError(apdu.getStatus(), false)) {
+				System.out.println("Old Tickets archived");
+			}
+		} catch (Exception e) {
+			return false;
+		}
+		return true;
+	}
 
 	public static byte[] readPin() throws IncorrectPinFormatException {
 		Scanner scan = new Scanner(System.in).useDelimiter("");
 		byte[] pin = new byte[4];
-		for(int i=0; i < 4; i++) {
-			if(scan.hasNextInt())
+		for (int i = 0; i < 4; i++) {
+			if (scan.hasNextInt())
 				pin[i] = (byte) scan.nextInt();
-			else 
+			else
 				throw new IncorrectPinFormatException();
 		}
 		scan.nextLine();
 		return pin;
 	}
-	
-	public static int verifyPin(Apdu apdu, CadT1Client cad) throws IOException, CadTransportException, IncorrectPinFormatException {
+
+	public static int verifyPin(Apdu apdu, CadT1Client cad) throws IOException,
+			CadTransportException, IncorrectPinFormatException {
 		apdu.command[Apdu.INS] = eCine.INS_VERIFY_PIN;
 		System.out.println("Please enter your PIN:");
 		byte[] pin = readPin();
@@ -300,7 +355,7 @@ public class eCineClient {
 		cad.exchangeApdu(apdu);
 		return apdu.getStatus();
 	}
-	
+
 	public static byte[] dateToArg() {
 		byte[] data = new byte[5];
 		data[0] = day;
@@ -308,13 +363,14 @@ public class eCineClient {
 		data[2] = year;
 		data[3] = (byte) (time >> 8);
 		data[4] = (byte) (time & 0xFF);
-		return data;		
+		return data;
 	}
 
-	public static boolean manageError(int status) {
+	public static boolean manageError(int status, boolean notify) {
 		switch (status) {
 		case 0x9000:
-			System.out.println("Operation Successful");
+			if(notify)
+				System.out.println("Operation Successful");
 			return true;
 		case eCine.SW2_CARD_LOCKED:
 			System.err
@@ -322,6 +378,12 @@ public class eCineClient {
 			break;
 		case eCine.SW2_VERIFICATION_FAILED:
 			System.err.println("Invalid PIN. Please try again");
+			break;
+		case eCine.SW2_INSUFFICIENT_BALANCE:
+			System.err.println("Insfficiant Funds");
+			break;
+		case eCine.SW2_DATE_CONFLICT :
+			System.err.println("Date Conflict");
 			break;
 		default:
 			System.err.println("Error : " + status);

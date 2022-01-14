@@ -1,18 +1,15 @@
 package ecinepackage;
 
 public class Screening {
+	final public static byte DURATION_UNIT = 5;
+	final public static byte ELEMENT_COUNT = 9;
+
 	private short IDMovie;
 	private byte price;
 	private byte duration;
 
 	private byte day, month, year;
 	private short time;
-	private byte tdDay, tdMonth, tdYear;
-	private short tdTime;
-	
-	private Screening(){
-		IDMovie = -1;
-	}
 	
 	public Screening(short iDMovie, byte price, byte duration, byte day,
 			byte month, byte year, short time) {
@@ -24,10 +21,6 @@ public class Screening {
 		this.month = month;
 		this.year = year;
 		this.time = time;
-		/*this.tdDay = tdDay;
-		this.tdMonth = tdMonth;
-		this.tdYear = tdYear;
-		this.tdTime = tdTime;*/
 	}
 
 	public short getIDMovie() {
