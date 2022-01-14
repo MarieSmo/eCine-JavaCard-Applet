@@ -55,10 +55,16 @@ public class eCineClient {
 
 		return screenings;
 	}
+	
+	//actual date, normally updated automatically
+	static byte day = (byte) 7;
+	static byte month = (byte) 1;
+	static byte year = (byte) 22;
+	static short time = 890;
 
 	public static void dsplayScreenings(
 			Map<Integer, AbstractMap.SimpleEntry<String, Screening>> screenings) {
-		System.out.println(String.format("Nb: € %-25s Duration Date","Movie"));
+		System.out.println(String.format("Nb: ï¿½ %-25s Duration Date","Movie"));
 
 		for (Entry<Integer, SimpleEntry<String, Screening>> item : screenings
 				.entrySet()) {
@@ -179,6 +185,14 @@ public class eCineClient {
 			byte[] pin;
 			byte[] data;
 			try {
+				//archivage des tickets
+				apdu.command[Apdu.INS] = eCine.INS_ARCHIVE_TICKETS;
+				data = new byte[4];
+				data[0] = day;
+				data[1] = month;
+				
+				cad.exchangeApdu(apdu);
+				manageError(apdu.getStatus());
 
 				int choix = Integer.parseInt(scan.nextLine());
 				while (!(choix >= 0 && choix <= 5)) {
@@ -209,11 +223,7 @@ public class eCineClient {
 				case 1:
 					apdu.command[Apdu.INS] = eCine.INS_GET_BALANCE;
 					cad.exchangeApdu(apdu);
-					if (apdu.getStatus() != 0x9000) {
-						System.out.println(apdu.getStatus());
-						System.out
-								.println("Erreur : status word different de 0x9000");
-					} else {
+					if (manageError(apdu.getStatus())) {
 						System.out.println("Balance : " + apdu.dataOut[0]);
 					}
 					break;
@@ -233,20 +243,15 @@ public class eCineClient {
 
 				case 3:
 					apdu.command[Apdu.INS] = eCine.INS_UNLOCK_CARD;
-					byte[] donnees = new byte[1];
-					donnees[0] = 0;
-					apdu.setDataIn(donnees);
+					System.out.println("Please enter admin PUK:");
+					pin = readPin();
+					apdu.setDataIn(pin);
 					cad.exchangeApdu(apdu);
-					if (apdu.getStatus() != 0x9000) {
-						System.out
-								.println("Erreur : status word different de 0x9000");
-					} else {
-						System.out.println("OK");
-					}
+					manageError(apdu.getStatus());
 					break;
 
 				case 4:
-					apdu.command[Apdu.INS] = eCine.INS_ARCHIVE_TICKET;
+					apdu.command[Apdu.INS] = eCine.INS_ARCHIVE_TICKETS;
 
 					break;
 
@@ -289,7 +294,16 @@ public class eCineClient {
 		apdu.setDataIn(pin);
 		cad.exchangeApdu(apdu);
 		return apdu.getStatus();
-		
+	}
+	
+	public static byte[] dateToArg() {
+		byte[] data = new byte[5];
+		data[0] = day;
+		data[1] = month;
+		data[2] = year;
+		data[3] = (byte) (time >> 8);
+		data[4] = (byte) (time & 0xFF);
+		return data;		
 	}
 
 	public static boolean manageError(int status) {
