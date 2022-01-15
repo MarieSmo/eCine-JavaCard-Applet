@@ -343,6 +343,7 @@ public class eCineClient {
 				throw new IncorrectPinFormatException();
 		}
 		scan.nextLine();
+		scan.close();
 		return pin;
 	}
 
