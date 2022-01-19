@@ -248,7 +248,7 @@ public class eCineClient {
 						data[0] = (byte) refund;
 						apdu.setDataIn(data);
 						cad.exchangeApdu(apdu);
-						manageError(apdu.getStatus(), false);
+						manageError(apdu.getStatus(), true);
 					}
 					break;
 
@@ -258,12 +258,13 @@ public class eCineClient {
 					pin = readPin();
 					apdu.setDataIn(pin);
 					cad.exchangeApdu(apdu);
-					manageError(apdu.getStatus(), false);
+					manageError(apdu.getStatus(), true);
 					break;
 
 				case 4:
 					apdu.command[Apdu.INS] = eCine.INS_ARCHIVE_TICKETS;
-
+					archiveTickets(apdu, cad);
+					manageError(apdu.getStatus(), true);
 					break;
 				case 5:
 					apdu.command[Apdu.INS] = eCine.INS_GET_LOGS;
@@ -323,10 +324,11 @@ public class eCineClient {
 			byte[] data = new byte[4];
 			data[0] = day;
 			data[1] = month;
+			data[2] = year;
+			data[3] = (byte) (time >> 8);
+			data[4] = (byte) (time & 0xFF);
+			apdu.setDataIn(data);
 			cad.exchangeApdu(apdu);
-			if (manageError(apdu.getStatus(), false)) {
-				System.out.println("Old Tickets archived");
-			}
 		} catch (Exception e) {
 			return false;
 		}
@@ -343,7 +345,6 @@ public class eCineClient {
 				throw new IncorrectPinFormatException();
 		}
 		scan.nextLine();
-		scan.close();
 		return pin;
 	}
 
@@ -374,8 +375,7 @@ public class eCineClient {
 				System.out.println("Operation Successful");
 			return true;
 		case eCine.SW2_CARD_LOCKED:
-			System.err
-					.println("Your card is locked. PLease call an admin to unlock it.");
+			System.err.println("Your card is locked. PLease call an admin to unlock it.");
 			break;
 		case eCine.SW2_VERIFICATION_FAILED:
 			System.err.println("Invalid PIN. Please try again");

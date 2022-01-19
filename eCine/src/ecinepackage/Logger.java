@@ -15,7 +15,7 @@ public class Logger {
 		logIndex = -1;
 	}
 	
-	private void logOperation(byte... params) {
+	private void logOperation(byte[] params) {
 		if(logIndex == MAX_LOG)
 			logIndex = 0;
 		else
@@ -33,15 +33,27 @@ public class Logger {
 	}
 	
 	public void logTicketPurchase (short movieID, byte amount, byte type) {
-		logOperation(eCine.INS_BUY_TICKET, (byte) (movieID >> 8), (byte) (movieID & 0xFF), amount, type );
+		byte[] params = new byte[5];
+		params[0] = eCine.INS_BUY_TICKET;
+		params[1] =	(byte) (movieID >> 8);
+		params[2] = (byte) (movieID & 0xFF);
+		params[3] = amount;
+		params[4] = type;
+		logOperation(params);
 	}
 	
 	public void logRefund (byte amount, byte totalBalance) {
-		logOperation(eCine.INS_REFUND_BALANCE, amount, totalBalance, (byte) 0);
+		byte[] params = new byte[3];
+		params[0] = eCine.INS_REFUND_BALANCE;
+		params[1] =	amount;
+		params[2] = totalBalance;
+		logOperation(params);
 	}
 	
 	public void logAbort () {
-		logOperation((byte)-1);
+		byte[] params = new byte[1];
+		params[0] = (byte) -1;
+		logOperation(params);
 	}
 	
 	public byte[] toByteArray() {

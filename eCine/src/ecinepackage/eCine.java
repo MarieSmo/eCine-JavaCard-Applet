@@ -51,7 +51,7 @@ public class eCine extends Applet {
 	private static Screening immediateScreening;
 
 	private eCine() {
-		balance = (byte) 20;
+		balance = (byte) 0;
 		transactions = (byte) 0;
 		screenings = new Screening[MAX_SCREENINGS_COUNT];
 		pastScreenings = new byte[MAX_TRANSACTIONS];
@@ -99,8 +99,7 @@ public class eCine extends Applet {
 			}
 			break;
 		case INS_ARCHIVE_TICKETS:
-			// apdu.setIncomingAndReceive();
-			// compteur = buffer[ISO7816.OFFSET_CDATA];
+			archiveOldTickets(apdu);
 			break;
 		case INS_VERIFY_PIN:
 			verify(apdu);
@@ -215,7 +214,7 @@ public class eCine extends Applet {
 
 		if (byteRead != 5)
 			ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
-
+		
 		byte day = buffer[ISO7816.OFFSET_CDATA];
 		byte month = buffer[ISO7816.OFFSET_CDATA + 1];
 		byte year = buffer[ISO7816.OFFSET_CDATA + 2];
