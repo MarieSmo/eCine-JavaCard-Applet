@@ -1,2 +1,0 @@
-# eCine-JavaCard-Applet
-pouet

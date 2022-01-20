@@ -1,5 +1,9 @@
 package ecinepackage;
 
+/** Rolling Log Class
+ * Log actions done on the card
+ * @author AL KES ISHAQ Yousif Smolinski Marie
+ */
 public class Logger {
 	public static final byte BUY_TICKET_REWARD = 0x0;
 	public static final byte BUY_TICKET_BALANCE = 0x1;

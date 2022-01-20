@@ -2,6 +2,10 @@ package ecinepackage;
 
 import javacard.framework.Util;
 
+/** Rolling PastScreenings Log Class
+ * Log Archived Movies
+ * @author AL KES ISHAQ Yousif Smolinski Marie
+ */
 public class PastScreenings {
 	public static final byte MAX_HISTORY = 16;
 

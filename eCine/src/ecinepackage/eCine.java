@@ -35,11 +35,17 @@ public class eCine extends Applet {
 	public static final byte SW2_CARD_DEAD = (byte) 0x08;
 	public static final byte SW2_DATE_CONFLICT = (byte) 0x09;
 
+	// Operational Variables
 	private static byte balance;
 	private static byte rewards;
 	public static byte transactions;
 	private static OwnerPIN userPIN;
 	private static OwnerPIN adminPUK;
+	/* Screening variables */
+	private static Screening[] screenings;
+	private static Screening immediateScreening;
+	
+	// Loggers
 	private static Logger logger;
 	private static PastScreenings pastScreenings;
 
@@ -47,40 +53,21 @@ public class eCine extends Applet {
 	public static final byte MAX_REFUND_AMOUNT = (byte) 50;
 	public static final byte MAX_BALANCE_AMOUNT = (byte) 100;
 	public static final byte MAX_TRANSACTIONS = (byte) 127;
-	public static final byte MAX_SCREENINGS_COUNT = (byte) 2;
+	public static final byte MAX_SCREENINGS_COUNT = (byte) 5;
 
-	/* Screening variables */
-	private static Screening[] screenings;
-	private static Screening immediateScreening;
+	public static final byte [] ADMIN_PUK = { 0, 0, 0, 1 };
+	public static final byte [] USER_PIN = { 1, 2, 3, 4 };
 
 	private eCine() {
-		balance = (byte) 80;
+		balance = (byte) 0;
 		transactions = (byte) 0;
 		screenings = new Screening[MAX_SCREENINGS_COUNT];
 		pastScreenings = new PastScreenings();
 		logger = new Logger();
-		logger.logRefund((byte) 1, (byte) 1);
-		logger.logRefund((byte) 1, (byte) 2);
-		logger.logRefund((byte) 1, (byte) 3);
-		logger.logRefund((byte) 1, (byte) 4);
-		logger.logRefund((byte) 1, (byte) 5);
-		logger.logRefund((byte) 1, (byte) 6);
-		logger.logRefund((byte) 1, (byte) 7);
-		logger.logRefund((byte) 1, (byte) 8);
-		logger.logRefund((byte) 1, (byte) 9);
-		logger.logRefund((byte) 1, (byte) 10);
-		logger.logRefund((byte) 1, (byte) 11);
-		logger.logRefund((byte) 1, (byte) 12);
-		logger.logRefund((byte) 1, (byte) 13);
-		logger.logRefund((byte) 1, (byte) 14);
-		logger.logRefund((byte) 1, (byte) 15);
-		logger.logRefund((byte) 1, (byte) 16);
-		byte[] pin = { 1, 2, 3, 4 };
 		userPIN = new OwnerPIN((byte) 3, (byte) 4);
-		userPIN.update(pin, (short) 0, (byte) 4);
-		byte[] puk = { 0, 0, 0, 1 };
+		userPIN.update(USER_PIN, (short) 0, (byte) 4);
 		adminPUK = new OwnerPIN((byte) 3, (byte) 4);
-		adminPUK.update(puk, (short) 0, (byte) 4);
+		adminPUK.update(ADMIN_PUK, (short) 0, (byte) 4);
 	}
 
 	public static void install(byte bArray[], short bOffset, byte bLength)
@@ -234,7 +221,7 @@ public class eCine extends Applet {
 	// -------------------- HANDLE Archiving --------------------------------
 	private void compareAndArchive(byte tdDay, byte tdMonth, byte tdYear,
 			short tdTime) {
-		// Check normal screenings
+		// If any screenings endtime is before now archive it
 		for (short i = 0; i < MAX_SCREENINGS_COUNT; ++i) {
 			if (screenings[i] != null) {
 				byte sDay = screenings[i].getDay();

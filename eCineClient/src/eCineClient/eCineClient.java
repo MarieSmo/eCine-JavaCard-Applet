@@ -4,12 +4,9 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.AbstractMap;
 import java.util.AbstractMap.SimpleEntry;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -43,31 +40,31 @@ public class eCineClient {
 		screenings.put(2, new AbstractMap.SimpleEntry<String, Screening>(
 				"Matrix", new Screening((short) 2, (byte) 5, (byte) 20,
 						(byte) 5, (byte) 7, (byte) 22, (short) 1200)));
-		// 3 La La Land 6EUR 105min 10/01/2022 20:00
+		// 3 La La Land 6EUR 105min 10/12/2022 20:00
 		screenings.put(3, new AbstractMap.SimpleEntry<String, Screening>(
 				"La La Land", new Screening((short) 3, (byte) 6, (byte) 21,
 						(byte) 10, (byte) 12, (byte) 22, (short) 1200)));
-		// 4 Cars 5EUR 110min 11/01/2022 19:00
+		// 4 Cars 5EUR 110min 11/12/2022 19:00
 		screenings.put(4, new AbstractMap.SimpleEntry<String, Screening>(
 				"Cars", new Screening((short) 4, (byte) 5, (byte) 24,
 						(byte) 11, (byte) 12, (byte) 22, (short) 1140)));
-		// 5 Avengers 12EUR 143min 12/01/2022 20:00
+		// 5 Avengers 12EUR 143min 12/12/2022 20:00
 		screenings.put(5, new AbstractMap.SimpleEntry<String, Screening>(
 				"Avengers", new Screening((short) 5, (byte) 12, (byte) 29,
 						(byte) 12, (byte) 12, (byte) 22, (short) 1200)));
-		// 6 Love Actually 5EUR 120min 11/01/2022 21:00
+		// 6 Love Actually 5EUR 120min 11/12/2022 21:00
 		screenings.put(6, new AbstractMap.SimpleEntry<String, Screening>(
 				"Love Actually", new Screening((short) 6, (byte) 5, (byte) 24,
 						(byte) 11, (byte) 12, (byte) 22, (short) 1260)));
-		// 7 Shrek 5EUR 110min 13/01/2022 20:00
+		// 7 Shrek 5EUR 110min 13/12/2022 20:00
 		screenings.put(7, new AbstractMap.SimpleEntry<String, Screening>(
 				"Shrek", new Screening((short) 7, (byte) 25, (byte) 24,
 						(byte) 13, (byte) 12, (byte) 22, (short) 1200)));
-		// 8 Cars 2 5EUR 120min 11/01/2022 20:55
+		// 8 Cars 2 5EUR 120min 11/12/2022 20:55
 		screenings.put(8, new AbstractMap.SimpleEntry<String, Screening>(
 				"Cars 2", new Screening((short) 8, (byte) 5, (byte) 24,
 						(byte) 11, (byte) 12, (byte) 22, (short) 1260)));
-		// 9 Cars 3 5EUR 120min 11/01/2022 17:05
+		// 9 Cars 3 5EUR 120min 11/12/2022 17:05
 		screenings.put(9, new AbstractMap.SimpleEntry<String, Screening>(
 				"Cars 3", new Screening((short) 9, (byte) 5, (byte) 24,
 						(byte) 11, (byte) 12, (byte) 22, (short) 1025)));
@@ -75,40 +72,19 @@ public class eCineClient {
 		screenings.put(10, new AbstractMap.SimpleEntry<String, Screening>(
 						"Cars 4", new Screening((short) 10, (byte) 5, (byte) 24,
 								(byte) 11, (byte) 3, (byte) 22, (short) 1025)));
-
-
 		return screenings;
 	}
 
 	// actual date, normally updated automatically
-	static byte day = (byte) 10;
-	static byte month = (byte) 1;
-	static byte year = (byte) 22;
-	static short time = 150;
-
-	public static void displayScreenings(
-			Map<Integer, AbstractMap.SimpleEntry<String, Screening>> screenings) {
-		System.out.println(String
-				.format("Nb: � %-25s Duration Date", "Movie"));
-
-		for (Entry<Integer, SimpleEntry<String, Screening>> item : screenings
-				.entrySet()) {
-			Integer index = item.getKey();
-			String name = item.getValue().getKey();
-			Screening s = item.getValue().getValue();
-			System.out.println(String.format(
-					"%s: %02d %-25s %03dMins %02d:%02d %02d/%02d/20%2d", index,
-					s.getPrice(), name, s.getDuration() * 5, 
-					s.getTime()/60,
-					s.getTime()%60,
-					s.getDay(),
-					s.getMonth(), s.getYear()));
-		}
-	}
+	static byte day;
+	static byte month;
+	static byte year;
+	static short time;
 
 	public static void main(String[] args) throws IOException,
 			CadTransportException {
-
+		
+		// Initialize Movies List
 		Map<Integer, AbstractMap.SimpleEntry<String, Screening>> screenings = initMovies();
 
 		/* Connexion a la Javacard */
@@ -128,10 +104,9 @@ public class eCineClient {
 			return;
 		}
 
-		Apdu apdu = new Apdu();
-
 		/* Select the installer applet */
 		cad.powerUp();
+		Apdu apdu = new Apdu();
 		apdu.command[Apdu.CLA] = 0x00;
 		apdu.command[Apdu.INS] = (byte) 0xA4;
 		apdu.command[Apdu.P1] = 0x04;
@@ -196,13 +171,15 @@ public class eCineClient {
 			System.out.println("Erreur lors de la sélection de l'applet");
 			System.exit(1);
 		}
-
+		// Update Time
+		setDateTime();
+		// Archive cards
 		archiveTickets(cad, null);
 		manageError(apdu.getStatus(), false);
+		System.out.println("Today Date : " + year + "/"  + month + "/" + day + " " + time);
+
 		/* Menu principal */
 		boolean fin = false;
-		setDateTime();
-		System.out.println("Today Date : " + year + "/"  + month + "/" + day + " " + time);
 
 		while (!fin) {
 			Scanner scan = new Scanner(System.in);
@@ -235,7 +212,7 @@ public class eCineClient {
 				int choix = Integer.parseInt(scan.nextLine());
 
 				switch (choix) {
-				case 0:
+				case 0: //INS_BUY_TICKET
 					if (manageError(verifyPin(apdu, cad, false), false)) {
 						apdu.command[Apdu.INS] = eCine.INS_BUY_TICKET;
 						displayScreenings(screenings);
@@ -248,14 +225,14 @@ public class eCineClient {
 					}
 					break;
 
-				case 1:
+				case 1: //INS_GET_BALANCE
 					apdu.command[Apdu.INS] = eCine.INS_GET_BALANCE;
 					cad.exchangeApdu(apdu);
 					if (manageError(apdu.getStatus(), false)) {
 						System.out.println("Balance : " + apdu.dataOut[0]);
 					}
 					break;
-				case 2:
+				case 2: //INS_REFUND_BALANCE
 					if (manageError(verifyPin(apdu, cad, false), false)) {
 						apdu.command[Apdu.INS] = eCine.INS_REFUND_BALANCE;
 						System.out
@@ -269,7 +246,7 @@ public class eCineClient {
 					}
 					break;
 
-				case 3:
+				case 3: //INS_UNLOCK_CARD
 					apdu.command[Apdu.INS] = eCine.INS_UNLOCK_CARD;
 					System.out.println("Please enter admin PUK:");
 					pin = readPin();
@@ -278,12 +255,12 @@ public class eCineClient {
 					manageError(apdu.getStatus(), true);
 					break;
 
-				case 4:
+				case 4://INS_ARCHIVE_TICKETS
 					apdu.command[Apdu.INS] = eCine.INS_ARCHIVE_TICKETS;
 					archiveTickets(cad, apdu);
 					manageError(apdu.getStatus(), true);
 					break;
-				case 5:
+				case 5://INS_GET_LOGS
 					if (manageError(verifyPin(apdu, cad, true), false)) {
 						apdu.command[Apdu.INS] = eCine.INS_GET_LOGS;
 						cad.exchangeApdu(apdu);
@@ -291,7 +268,7 @@ public class eCineClient {
 						manageError(apdu.getStatus(), false);
 					}
 					break;
-				case 6:
+				case 6://INS_GET_ARCHIVED_TICKETS
 					if (manageError(verifyPin(apdu, cad, false), false)) {
 						apdu.command[Apdu.INS] = eCine.INS_GET_ARCHIVED_TICKETS;
 						cad.exchangeApdu(apdu);
@@ -299,7 +276,7 @@ public class eCineClient {
 						manageError(apdu.getStatus(), false);
 					}
 					break;
-				case 7:
+				case 7://Quit
 					fin = true;
 					break;
 				default:
@@ -322,7 +299,32 @@ public class eCineClient {
 			return;
 		}
 	}
+	/* 
+	 * Display Formated Screenings List
+	 */
+	public static void displayScreenings(
+			Map<Integer, AbstractMap.SimpleEntry<String, Screening>> screenings) {
+		System.out.println(String
+				.format("Nb: � %-25s Duration Date", "Movie"));
+
+		for (Entry<Integer, SimpleEntry<String, Screening>> item : screenings
+				.entrySet()) {
+			Integer index = item.getKey();
+			String name = item.getValue().getKey();
+			Screening s = item.getValue().getValue();
+			System.out.println(String.format(
+					"%s: %02d %-25s %03dMins %02d:%02d %02d/%02d/20%2d", index,
+					s.getPrice(), name, s.getDuration() * 5, 
+					s.getTime()/60,
+					s.getTime()%60,
+					s.getDay(),
+					s.getMonth(), s.getYear()));
+		}
+	}
 	
+	/* 
+	 * Get Current Time And Date And Update Variables
+	 */
 	public static void setDateTime() {
 		LocalDateTime now = LocalDateTime.now(); 
 		year = ( byte) (now.getYear() % 2000);
@@ -331,6 +333,9 @@ public class eCineClient {
 		time = (short) ((now.getHour() * 60) + now.getMinute());
 	}
 	
+	/* 
+	 * Display Formated Movie Archive
+	 */
 	public static void displayMovieLogs(byte[] data, Map<Integer, AbstractMap.SimpleEntry<String, Screening>> screenings){
 		byte currentIndex = data[0];
 		System.out.println("Archived Movie current index : " + (currentIndex + 1));
@@ -343,6 +348,9 @@ public class eCineClient {
 		}
 	}
 	
+	/* 
+	 * Display Formated Logs
+	 */
 	public static void displayLogs(byte[] data){
 		byte currentElement = 0;
 		byte loggerIndex = data[0];
@@ -367,6 +375,9 @@ public class eCineClient {
 		}
 	}
 
+	/* 
+	 * Send archive old tickets command
+	 */
 	public static boolean archiveTickets(CadT1Client cad, Apdu apdu) {
 		// Init Connection
 		try {
@@ -391,7 +402,12 @@ public class eCineClient {
 		}
 		return true;
 	}
-
+	
+	/* 
+	 * Read a 4 digit number from the console
+	 * 
+	 * All Extra input is ignored
+	 */
 	public static byte[] readPin() throws IncorrectPinFormatException {
 		Scanner scan = new Scanner(System.in).useDelimiter("");
 		byte[] pin = new byte[4];
@@ -405,6 +421,9 @@ public class eCineClient {
 		return pin;
 	}
 
+	/* 
+	 * Send Verify pin command to the card
+	 */
 	public static int verifyPin(Apdu apdu, CadT1Client cad, boolean admin) throws IOException,
 			CadTransportException, IncorrectPinFormatException {
 		if (!admin) {
@@ -419,28 +438,10 @@ public class eCineClient {
 		cad.exchangeApdu(apdu);
 		return apdu.getStatus();
 	}
-
-	public static byte[] dateToArg() {
-		byte[] data = new byte[5];
-		data[0] = day;
-		data[1] = month;
-		data[2] = year;
-		data[3] = (byte) (time >> 8);
-		data[4] = (byte) (time & 0xFF);
-		return data;
-	}
 	
-	public static void readDate() {
-		Scanner scanner = new Scanner(System.in);
-	    String date = scanner.nextLine();
-	    Date date1;
-		try {
-			date1 = new SimpleDateFormat("yyyy/MM/dd").parse(date);
-		} catch (ParseException e) {
-			e.printStackTrace();
-		}  
-	}
-
+	/* 
+	 * Format Error Messages
+	 */
 	public static boolean manageError(int status, boolean notify) {
 		switch (status) {
 		case 0x9000:

@@ -1,0 +1,78 @@
+Al Kes Ishaq Yousif
+Smolinski Marie
+
+eCine javacard applet
+
+Notre projet contient 4 parties;
+	- un fichier eCineClient avec l'application client dans un projet
+	- un fichier eCine avec l'applet
+	- un fichier Purchase avec la classe décrivant un achat
+	- un fichier Screening avec la classe décrivant une séance
+	- un fihcier Logger avec la classe permettant la gestion de l'archivage tous dans un second projet, l'un étant dépendant de l'autre.
+Notre code n'utilise pas CREF mais JWCDE, pour lancer l'application il suffit de démarrer le simulateur JWCDE et de run le main eCineClient.
+!! il faut potentiellement donner le chemin vers la lib jcdk dans les proprietes de projet
+
+Fonctionnalités:
+	Un utilisateur lambda peut acheter des séances de cinéma, sous certaines contraintes (argent suffisant, pas trop de séances déjà achetées, pas de chevauchement avec d'autres séances prévues, pas d'achat de séances passées, carte utilisable).
+	Il peut gérer son portefeille comme il l'entend dans la limite de 100€ et par rechargement de 50€ maximum.
+	A chaque achat, il gagne 5 points de fidélité et bénéficie d'une réduction automatique au bout de 50 points.
+	Il y a deux archivage, un archivage des séances achetées et passées, qui peut être demandé et accédé par l'utilisateur pour libérer sa carte.
+	Il y a aussi un archivage automatique de toutes les actions de refund, achat, ou d'erreur, accessible seulement par l'administrateur.
+	Il contient 16 entrées pour économiser la place de la carte, et remplace les logs au fur et à mesure.
+	La sécurité est garantie par un code PIN utilisateur, demandé pour les actions d'achat de ticket et de refund.
+	Au bout de trois tentatives infructueuses, un administrateur peut débloquer la carte à l'aide de son code PUK administrateur.
+	Au bout de trois tentatives infructueuses, la carte est définitivement bloquée. 
+
+Codes Pin:
+	User 1234
+	Admin 0001
+
+Le scémario suivant a servi à notre démonstration : 
+	refund de 100 -> fail
+	refund de 30, 3 fois, fail à la 4ème
+	affichage du montant du porte monnaie
+
+	achat d'un film passé, 1 -> fail
+	achat du film 2
+	achat du film 2 -> fail
+
+	blocage de la carte
+	déblocage par l'administrateur
+	affichage des logs
+
+	achat de films se chevauchant (cars 3 et 1) -> fail
+	achat de 3 films supplémentaires, fail au 4ème
+
+	attente
+	demande d'archivage des films passés
+	affichage des logs de films
+
+	achat de 11 films en tout 
+	vérification de l'application de la réduction de fidélité
+
+	blocage de la carte
+	blocage définitif par l'administrateur
+
+
+Description de log:
+	La carte garde les derniers 16 valuers de log, la petite fleche indique
+	l'endroit courant de pointeur des logs, les anciennes valeurs ne sont pas effacés 
+	mais ils sont remplacé par les valuers les plus recent.
+	Lorsqu'une ligne dit "Aborted" cela signifie que l'opération précédente a été annulé.	
+	Exemple :
+		TopUp   : Amount: 100 newBalance: 100
+		Aborted
+		TopUp   : Amount: 30 newBalance: 30
+		TopUp   : Amount: 30 newBalance: 60
+		TopUp   : Amount: 30 newBalance: 90
+		TopUp   : Amount: 100 newBalance: 120
+		Aborted
+		Purchase: ID: 01 Price:10 PaymentMethod:01
+		Aborted
+		Purchase: ID: 02 Price:05 PaymentMethod:01
+		Purchase: ID: 02 Price:05 PaymentMethod:01
+		Aborted
+		Purchase: ID: 04 Price:05 PaymentMethod:01
+		Purchase: ID: 09 Price:05 PaymentMethod:01
+		Aborted
+		>Purchase: ID: 05 Price:12 PaymentMethod:01
