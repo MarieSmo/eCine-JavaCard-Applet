@@ -220,7 +220,7 @@ public class eCineClient {
 
 				switch (choix) {
 				case 0:
-					if (manageError(verifyPin(apdu, cad), false)) {
+					if (manageError(verifyPin(apdu, cad, false), false)) {
 						apdu.command[Apdu.INS] = eCine.INS_BUY_TICKET;
 						displayScreenings(screenings);
 						int screeningChoice = Integer.parseInt(scan.nextLine());
@@ -240,7 +240,7 @@ public class eCineClient {
 					}
 					break;
 				case 2:
-					if (manageError(verifyPin(apdu, cad), false)) {
+					if (manageError(verifyPin(apdu, cad, false), false)) {
 						apdu.command[Apdu.INS] = eCine.INS_REFUND_BALANCE;
 						System.out
 								.println("Enter the amount you want to credit:");
@@ -268,6 +268,7 @@ public class eCineClient {
 					manageError(apdu.getStatus(), true);
 					break;
 				case 5:
+					//BLOCK ACCESS
 					apdu.command[Apdu.INS] = eCine.INS_GET_LOGS;
 					cad.exchangeApdu(apdu);
 					displayLogs(apdu.dataOut);
@@ -350,10 +351,14 @@ public class eCineClient {
 		return pin;
 	}
 
-	public static int verifyPin(Apdu apdu, CadT1Client cad) throws IOException,
+	public static int verifyPin(Apdu apdu, CadT1Client cad, boolean admin) throws IOException,
 			CadTransportException, IncorrectPinFormatException {
-		apdu.command[Apdu.INS] = eCine.INS_VERIFY_PIN;
-		System.out.println("Please enter your PIN:");
+		if (!admin) {
+			apdu.command[Apdu.INS] = eCine.INS_VERIFY_PIN;
+			System.out.println("Please enter your PIN:");
+		} else {
+			
+		}
 		byte[] pin = readPin();
 		apdu.setDataIn(pin);
 		cad.exchangeApdu(apdu);
@@ -387,6 +392,18 @@ public class eCineClient {
 			break;
 		case eCine.SW2_DATE_CONFLICT :
 			System.err.println("Date Conflict");
+			break;
+		case eCine.SW2_INVALID_REFUND_AMOUNT:
+			System.err.println("The amount of your refund is too high");
+			break;
+		case eCine.SW2_EXCEED_MAXIMUM_BALANCE:
+			System.err.println("You reached the maximum balance amount");
+			break;
+		case eCine.SW2_MAX_TRANSACTION_AMOUNT_REACHED :
+			System.err.println("You reached the max amount of transactions. You card is now unusable");
+			break;
+		case eCine.SW2_CARD_DEAD :
+			System.err.println("Your card is dead");
 			break;
 		default:
 			System.err.println("Error : " + status);
