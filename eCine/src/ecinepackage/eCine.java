@@ -18,6 +18,8 @@ public class eCine extends Applet {
 	public static final byte INS_ARCHIVE_TICKETS = (byte) 0x05;
 	public static final byte INS_VERIFY_PIN = (byte) 0x06;
 	public static final byte INS_GET_LOGS = (byte) 0x07;
+	public static final byte INS_VERIFY_PUK = (byte) 0x08;
+
 	/* Error return value */
 	public static final byte SW1_OK = (byte) 0x0A;
 	public static final byte SW2_PURCHASE_OK = (byte) 0x01;
@@ -99,14 +101,17 @@ public class eCine extends Applet {
 			}
 			break;
 		case INS_ARCHIVE_TICKETS:
-
 			archiveOldTickets(apdu);
-
 			break;
 		case INS_VERIFY_PIN:
 			verify(apdu);
 			break;
+		case INS_VERIFY_PUK:
+			verifyPuk(apdu);
+			break;
 		case INS_GET_LOGS:
+			if (adminPUK.isValidated() == false)
+				ISOException.throwIt(SW2_VERIFICATION_FAILED);
 			Util.arrayCopyNonAtomic(logger.toByteArray(), (short) 0, buffer,
 					(short) 0, (short) (Logger.MAX_LOG * Logger.MESSAGE_SIZE));
 			apdu.setOutgoingAndSend((short) 0,
@@ -124,6 +129,9 @@ public class eCine extends Applet {
 		byte numBytes = buffer[ISO7816.OFFSET_LC];
 		byte byteRead = (byte) (apdu.setIncomingAndReceive());
 
+		if (userPIN.isValidated() == false)
+			ISOException.throwIt(SW2_VERIFICATION_FAILED);
+		
 		if (byteRead != 1)
 			ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
 
@@ -141,6 +149,22 @@ public class eCine extends Applet {
 
 	// -------------------- HANDLE Balance --------------------------------
 	// -------------------- HANDLE PIN/PUK --------------------------------
+	
+	private void verifyPuk(APDU apdu) {
+		byte[] buffer = apdu.getBuffer();
+		// retrieve the PIN data for validation.
+		byte byteRead = (byte) (apdu.setIncomingAndReceive());
+
+		// check pin
+		if (adminPUK.check(buffer, ISO7816.OFFSET_CDATA, byteRead) == false) {
+			if (adminPUK.getTriesRemaining() <= 0) {
+				ISOException.throwIt(SW2_CARD_LOCKED);
+			} else {
+				ISOException.throwIt(SW2_VERIFICATION_FAILED);
+			}
+		}
+	}
+	
 	private void verify(APDU apdu) {
 		byte[] buffer = apdu.getBuffer();
 		// retrieve the PIN data for validation.
@@ -184,7 +208,6 @@ public class eCine extends Applet {
 				byte sYear = screenings[i].getYear();
 				short eTime = (short) (screenings[i].getTime() + (screenings[i]
 						.getDuration() * Screening.DURATION_UNIT));
-
 				if (sYear > tdYear)
 					continue;
 				else if (sYear < tdYear)
@@ -284,6 +307,9 @@ public class eCine extends Applet {
 	}
 
 	private void buyTicket(APDU apdu) {
+		if (userPIN.isValidated() == false)
+			ISOException.throwIt(SW2_VERIFICATION_FAILED);
+		
 		byte[] buffer = apdu.getBuffer();
 		// Lc byte denotes the number of bytes in the
 		// data field of the command APDU

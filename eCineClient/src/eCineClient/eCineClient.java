@@ -268,11 +268,12 @@ public class eCineClient {
 					manageError(apdu.getStatus(), true);
 					break;
 				case 5:
-					//BLOCK ACCESS
-					apdu.command[Apdu.INS] = eCine.INS_GET_LOGS;
-					cad.exchangeApdu(apdu);
-					displayLogs(apdu.dataOut);
-					manageError(apdu.getStatus(), false);
+					if (manageError(verifyPin(apdu, cad, true), false)) {
+						apdu.command[Apdu.INS] = eCine.INS_GET_LOGS;
+						cad.exchangeApdu(apdu);
+						displayLogs(apdu.dataOut);
+						manageError(apdu.getStatus(), false);
+					}
 					break;
 				case 6:
 					fin = true;
@@ -357,7 +358,8 @@ public class eCineClient {
 			apdu.command[Apdu.INS] = eCine.INS_VERIFY_PIN;
 			System.out.println("Please enter your PIN:");
 		} else {
-			
+			apdu.command[Apdu.INS] = eCine.INS_VERIFY_PUK;
+			System.out.println("Please enter admin PUK:");
 		}
 		byte[] pin = readPin();
 		apdu.setDataIn(pin);
