@@ -99,7 +99,9 @@ public class eCine extends Applet {
 			}
 			break;
 		case INS_ARCHIVE_TICKETS:
+
 			archiveOldTickets(apdu);
+
 			break;
 		case INS_VERIFY_PIN:
 			verify(apdu);

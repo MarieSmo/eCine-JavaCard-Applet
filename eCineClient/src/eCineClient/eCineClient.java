@@ -185,7 +185,8 @@ public class eCineClient {
 			System.exit(1);
 		}
 
-		archiveTickets(apdu, cad);
+		archiveTickets(cad, null);
+		manageError(apdu.getStatus(), false);
 		/* Menu principal */
 		boolean fin = false;
 		while (!fin) {
@@ -263,7 +264,7 @@ public class eCineClient {
 
 				case 4:
 					apdu.command[Apdu.INS] = eCine.INS_ARCHIVE_TICKETS;
-					archiveTickets(apdu, cad);
+					archiveTickets(cad, apdu);
 					manageError(apdu.getStatus(), true);
 					break;
 				case 5:
@@ -311,17 +312,18 @@ public class eCineClient {
 		}
 	}
 
-	public static boolean archiveTickets(Apdu apdu, CadT1Client cad) {
+	public static boolean archiveTickets(CadT1Client cad, Apdu apdu) {
 		// Init Connection
 		try {
-			apdu = new Apdu();
-			apdu.command[Apdu.CLA] = eCine.CLA_ECINE;
-			apdu.command[Apdu.P1] = 0x04;
-			apdu.command[Apdu.P2] = 0x00;
-
+			if(apdu == null){
+				apdu = new Apdu();
+				apdu.command[Apdu.CLA] = eCine.CLA_ECINE;
+				apdu.command[Apdu.P1] = 0x04;
+				apdu.command[Apdu.P2] = 0x00;
+			}
 			// archivage des tickets
 			apdu.command[Apdu.INS] = eCine.INS_ARCHIVE_TICKETS;
-			byte[] data = new byte[4];
+			byte[] data = new byte[5];
 			data[0] = day;
 			data[1] = month;
 			data[2] = year;
