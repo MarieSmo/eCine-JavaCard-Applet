@@ -47,18 +47,34 @@ public class eCine extends Applet {
 	public static final byte MAX_REFUND_AMOUNT = (byte) 50;
 	public static final byte MAX_BALANCE_AMOUNT = (byte) 100;
 	public static final byte MAX_TRANSACTIONS = (byte) 127;
-	public static final byte MAX_SCREENINGS_COUNT = (byte) 5;
+	public static final byte MAX_SCREENINGS_COUNT = (byte) 2;
 
 	/* Screening variables */
 	private static Screening[] screenings;
 	private static Screening immediateScreening;
 
 	private eCine() {
-		balance = (byte) 25;
+		balance = (byte) 80;
 		transactions = (byte) 0;
 		screenings = new Screening[MAX_SCREENINGS_COUNT];
 		pastScreenings = new PastScreenings();
 		logger = new Logger();
+		logger.logRefund((byte) 1, (byte) 1);
+		logger.logRefund((byte) 1, (byte) 2);
+		logger.logRefund((byte) 1, (byte) 3);
+		logger.logRefund((byte) 1, (byte) 4);
+		logger.logRefund((byte) 1, (byte) 5);
+		logger.logRefund((byte) 1, (byte) 6);
+		logger.logRefund((byte) 1, (byte) 7);
+		logger.logRefund((byte) 1, (byte) 8);
+		logger.logRefund((byte) 1, (byte) 9);
+		logger.logRefund((byte) 1, (byte) 10);
+		logger.logRefund((byte) 1, (byte) 11);
+		logger.logRefund((byte) 1, (byte) 12);
+		logger.logRefund((byte) 1, (byte) 13);
+		logger.logRefund((byte) 1, (byte) 14);
+		logger.logRefund((byte) 1, (byte) 15);
+		logger.logRefund((byte) 1, (byte) 16);
 		byte[] pin = { 1, 2, 3, 4 };
 		userPIN = new OwnerPIN((byte) 3, (byte) 4);
 		userPIN.update(pin, (short) 0, (byte) 4);

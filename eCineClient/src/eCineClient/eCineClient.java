@@ -46,31 +46,35 @@ public class eCineClient {
 		// 3 La La Land 6EUR 105min 10/01/2022 20:00
 		screenings.put(3, new AbstractMap.SimpleEntry<String, Screening>(
 				"La La Land", new Screening((short) 3, (byte) 6, (byte) 21,
-						(byte) 10, (byte) 1, (byte) 22, (short) 1200)));
+						(byte) 10, (byte) 12, (byte) 22, (short) 1200)));
 		// 4 Cars 5EUR 110min 11/01/2022 19:00
 		screenings.put(4, new AbstractMap.SimpleEntry<String, Screening>(
 				"Cars", new Screening((short) 4, (byte) 5, (byte) 24,
-						(byte) 11, (byte) 1, (byte) 22, (short) 1140)));
+						(byte) 11, (byte) 12, (byte) 22, (short) 1140)));
 		// 5 Avengers 12EUR 143min 12/01/2022 20:00
 		screenings.put(5, new AbstractMap.SimpleEntry<String, Screening>(
 				"Avengers", new Screening((short) 5, (byte) 12, (byte) 29,
-						(byte) 12, (byte) 1, (byte) 22, (short) 1200)));
+						(byte) 12, (byte) 12, (byte) 22, (short) 1200)));
 		// 6 Love Actually 5EUR 120min 11/01/2022 21:00
 		screenings.put(6, new AbstractMap.SimpleEntry<String, Screening>(
 				"Love Actually", new Screening((short) 6, (byte) 5, (byte) 24,
-						(byte) 11, (byte) 1, (byte) 22, (short) 1260)));
+						(byte) 11, (byte) 12, (byte) 22, (short) 1260)));
 		// 7 Shrek 5EUR 110min 13/01/2022 20:00
 		screenings.put(7, new AbstractMap.SimpleEntry<String, Screening>(
 				"Shrek", new Screening((short) 7, (byte) 25, (byte) 24,
-						(byte) 13, (byte) 1, (byte) 22, (short) 1200)));
+						(byte) 13, (byte) 12, (byte) 22, (short) 1200)));
 		// 8 Cars 2 5EUR 120min 11/01/2022 20:55
 		screenings.put(8, new AbstractMap.SimpleEntry<String, Screening>(
 				"Cars 2", new Screening((short) 8, (byte) 5, (byte) 24,
-						(byte) 11, (byte) 1, (byte) 22, (short) 1260)));
+						(byte) 11, (byte) 12, (byte) 22, (short) 1260)));
 		// 9 Cars 3 5EUR 120min 11/01/2022 17:05
 		screenings.put(9, new AbstractMap.SimpleEntry<String, Screening>(
 				"Cars 3", new Screening((short) 9, (byte) 5, (byte) 24,
-						(byte) 11, (byte) 1, (byte) 22, (short) 1025)));
+						(byte) 11, (byte) 12, (byte) 22, (short) 1025)));
+		// 10 Cars 4 5EUR 120min 11/03/2022 17:05
+		screenings.put(10, new AbstractMap.SimpleEntry<String, Screening>(
+						"Cars 4", new Screening((short) 10, (byte) 5, (byte) 24,
+								(byte) 11, (byte) 3, (byte) 22, (short) 1025)));
 
 
 		return screenings;
@@ -454,6 +458,9 @@ public class eCineClient {
 			break;
 		case eCine.SW2_DATE_CONFLICT :
 			System.err.println("Date Conflict");
+			break;
+		case eCine.SW2_TICKET_MAX_AMOUNT_REACHED:
+			System.err.println("You already bought 5 tickets");
 			break;
 		case eCine.SW2_INVALID_REFUND_AMOUNT:
 			System.err.println("The amount of your refund is too high");
