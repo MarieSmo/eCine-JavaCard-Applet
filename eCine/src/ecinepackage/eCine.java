@@ -19,6 +19,7 @@ public class eCine extends Applet {
 	public static final byte INS_VERIFY_PIN = (byte) 0x06;
 	public static final byte INS_GET_LOGS = (byte) 0x07;
 	public static final byte INS_VERIFY_PUK = (byte) 0x08;
+	public static final byte INS_GET_ARCHIVED_TICKETS = (byte) 0x09;
 
 	/* Error return value */
 	public static final byte SW1_OK = (byte) 0x0A;
@@ -40,7 +41,7 @@ public class eCine extends Applet {
 	private static OwnerPIN userPIN;
 	private static OwnerPIN adminPUK;
 	private static Logger logger;
-	private static byte[] pastScreenings;
+	private static PastScreenings pastScreenings;
 
 	/* Operational Consts */
 	public static final byte MAX_REFUND_AMOUNT = (byte) 50;
@@ -53,10 +54,10 @@ public class eCine extends Applet {
 	private static Screening immediateScreening;
 
 	private eCine() {
-		balance = (byte) 0;
+		balance = (byte) 25;
 		transactions = (byte) 0;
 		screenings = new Screening[MAX_SCREENINGS_COUNT];
-		pastScreenings = new byte[MAX_TRANSACTIONS];
+		pastScreenings = new PastScreenings();
 		logger = new Logger();
 		byte[] pin = { 1, 2, 3, 4 };
 		userPIN = new OwnerPIN((byte) 3, (byte) 4);
@@ -83,43 +84,59 @@ public class eCine extends Applet {
 		if (transactions == MAX_TRANSACTIONS) {
 			ISOException.throwIt(SW2_MAX_TRANSACTION_AMOUNT_REACHED);
 		}
+		try {
 
-		switch (buffer[ISO7816.OFFSET_INS]) {
-		case INS_BUY_TICKET:
-			buyTicket(apdu);
-			break;
-		case INS_GET_BALANCE:
-			buffer[0] = balance;
-			apdu.setOutgoingAndSend((short) 0, (short) 1);
-			break;
-		case INS_REFUND_BALANCE:
-			refundBalance(apdu);
-			break;
-		case INS_UNLOCK_CARD:
-			if (userPIN.getTriesRemaining() <= 0) {
-				unlockCard(apdu);
+			switch (buffer[ISO7816.OFFSET_INS]) {
+			case INS_BUY_TICKET:
+				buyTicket(apdu);
+				break;
+			case INS_GET_BALANCE:
+				buffer[0] = balance;
+				apdu.setOutgoingAndSend((short) 0, (short) 1);
+				break;
+			case INS_REFUND_BALANCE:
+				refundBalance(apdu);
+				break;
+			case INS_UNLOCK_CARD:
+				if (userPIN.getTriesRemaining() <= 0) {
+					unlockCard(apdu);
+				}
+				break;
+			case INS_ARCHIVE_TICKETS:
+				archiveOldTickets(apdu);
+				break;
+			case INS_VERIFY_PIN:
+				verify(apdu);
+				break;
+			case INS_VERIFY_PUK:
+				verifyPuk(apdu);
+				break;
+			case INS_GET_LOGS:
+				if (adminPUK.isValidated() == false)
+					ISOException.throwIt(SW2_VERIFICATION_FAILED);
+				Util.arrayCopyNonAtomic(logger.toByteArray(), (short) 0,
+						buffer, (short) 0, logger.getTotalSize());
+				apdu.setOutgoingAndSend((short) 0, logger.getTotalSize());
+				break;
+			case INS_GET_ARCHIVED_TICKETS:
+				if (userPIN.isValidated() == false)
+					ISOException.throwIt(SW2_VERIFICATION_FAILED);
+				Util.arrayCopyNonAtomic(pastScreenings.toByteArray(),
+						(short) 0, buffer, (short) 0,
+						pastScreenings.getTotalSize());
+				apdu.setOutgoingAndSend((short) 0,
+						pastScreenings.getTotalSize());
+				break;
+
+			default:
+				ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
 			}
-			break;
-		case INS_ARCHIVE_TICKETS:
-			archiveOldTickets(apdu);
-			break;
-		case INS_VERIFY_PIN:
-			verify(apdu);
-			break;
-		case INS_VERIFY_PUK:
-			verifyPuk(apdu);
-			break;
-		case INS_GET_LOGS:
-			if (adminPUK.isValidated() == false)
-				ISOException.throwIt(SW2_VERIFICATION_FAILED);
-			Util.arrayCopyNonAtomic(logger.toByteArray(), (short) 0, buffer,
-					(short) 0, (short) (Logger.MAX_LOG * Logger.MESSAGE_SIZE));
-			apdu.setOutgoingAndSend((short) 0,
-					(short) (Logger.MAX_LOG * Logger.MESSAGE_SIZE));
-			break;
-		default:
-			ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+
+		} catch (ISOException exception) {
+			logger.logAbort();
+			throw exception;
 		}
+		logger.commit();
 		transactions++;
 	}
 
@@ -131,11 +148,13 @@ public class eCine extends Applet {
 
 		if (userPIN.isValidated() == false)
 			ISOException.throwIt(SW2_VERIFICATION_FAILED);
-		
+
 		if (byteRead != 1)
 			ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
 
 		byte refund = buffer[ISO7816.OFFSET_CDATA];
+
+		logger.logRefund(refund, (byte) (balance + refund));
 
 		if ((refund > MAX_REFUND_AMOUNT) || (refund < 0))
 			ISOException.throwIt(SW2_INVALID_REFUND_AMOUNT);
@@ -144,12 +163,11 @@ public class eCine extends Applet {
 			ISOException.throwIt(SW2_EXCEED_MAXIMUM_BALANCE);
 
 		balance = (byte) (balance + refund);
-		logger.logRefund(refund, balance);
 	}
 
 	// -------------------- HANDLE Balance --------------------------------
 	// -------------------- HANDLE PIN/PUK --------------------------------
-	
+
 	private void verifyPuk(APDU apdu) {
 		byte[] buffer = apdu.getBuffer();
 		// retrieve the PIN data for validation.
@@ -164,7 +182,7 @@ public class eCine extends Applet {
 			}
 		}
 	}
-	
+
 	private void verify(APDU apdu) {
 		byte[] buffer = apdu.getBuffer();
 		// retrieve the PIN data for validation.
@@ -210,25 +228,39 @@ public class eCine extends Applet {
 						.getDuration() * Screening.DURATION_UNIT));
 				if (sYear > tdYear)
 					continue;
-				else if (sYear < tdYear)
+				else if (sYear < tdYear) {
+					pastScreenings.addScreening((byte) screenings[i]
+							.getIDMovie());
 					screenings[i] = null;
-				else if (sMonth > tdMonth)
-					continue;
-				else if (sMonth < tdMonth)
-					screenings[i] = null;
-				else if (sDay > tdDay)
-					continue;
-				else if (sDay < tdDay)
-					screenings[i] = null;
-				else if (eTime > tdTime)
-					continue;
-				else if (eTime < tdTime)
-					screenings[i] = null;
+
+				} else {
+					if (sMonth > tdMonth)
+						continue;
+					else if (sMonth < tdMonth) {
+						pastScreenings.addScreening((byte) screenings[i]
+								.getIDMovie());
+						screenings[i] = null;
+
+					} else {
+						if (sDay > tdDay)
+							continue;
+						else if (sDay < tdDay) {
+							pastScreenings.addScreening((byte) screenings[i]
+									.getIDMovie());
+							screenings[i] = null;
+						} else {
+							if (eTime > tdTime)
+								continue;
+							else if (eTime <= tdTime) {
+								pastScreenings
+										.addScreening((byte) screenings[i]
+												.getIDMovie());
+								screenings[i] = null;
+							}
+						}
+					}
+				}
 			}
-		}
-		// Check immediate screenings
-		if (immediateScreening != null) {
-			ISOException.throwIt(SW2_DATE_CONFLICT);
 		}
 	}
 
@@ -239,7 +271,7 @@ public class eCine extends Applet {
 
 		if (byteRead != 5)
 			ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
-		
+
 		byte day = buffer[ISO7816.OFFSET_CDATA];
 		byte month = buffer[ISO7816.OFFSET_CDATA + 1];
 		byte year = buffer[ISO7816.OFFSET_CDATA + 2];
@@ -305,11 +337,49 @@ public class eCine extends Applet {
 				}
 		return false;
 	}
+	
+	private boolean isBeforeNow(Purchase purchase) {
+			byte sDay = purchase.getScreening().getDay();
+			byte sMonth = purchase.getScreening().getMonth();
+			byte sYear = purchase.getScreening().getYear();
+			short eTime = (short) (purchase.getScreening().getTime() + (purchase.getScreening()
+					.getDuration() * Screening.DURATION_UNIT));
+			byte tdYear = purchase.getTdYear();
+			byte tdMonth = purchase.getTdMonth();
+			byte tdDay = purchase.getTdDay();
+			short tdTime = purchase.getTdTime();
+
+			if (sYear > tdYear)
+				return false;
+			else if (sYear < tdYear) {
+				return true;
+			} else {
+				if (sMonth > tdMonth)
+					return false;
+				else if (sMonth < tdMonth) {
+					return true;
+				} else {
+					if (sDay > tdDay)
+						return false;
+					else if (sDay < tdDay) {
+						return true;
+
+					} else {
+						if (eTime > tdTime)
+							return false;
+						else if (eTime <= tdTime) {
+							return true;
+						}
+					}
+				}
+			}
+		return false;
+	}
 
 	private void buyTicket(APDU apdu) {
 		if (userPIN.isValidated() == false)
 			ISOException.throwIt(SW2_VERIFICATION_FAILED);
-		
+
 		byte[] buffer = apdu.getBuffer();
 		// Lc byte denotes the number of bytes in the
 		// data field of the command APDU
@@ -330,21 +400,29 @@ public class eCine extends Applet {
 				ISO7816.OFFSET_CDATA);
 
 		Screening newTicket = newPurchase.getScreening();
+
+		// LOG
+		if (rewards == 50) {
+			logger.logTicketPurchase(newTicket.getIDMovie(),
+					newTicket.getPrice(), Logger.BUY_TICKET_REWARD);
+		} else {
+			logger.logTicketPurchase(newTicket.getIDMovie(),
+					newTicket.getPrice(), Logger.BUY_TICKET_BALANCE);
+		}
+		
+		if(isBeforeNow(newPurchase))
+			ISOException.throwIt(SW2_DATE_CONFLICT);
+
 		if ((balance - newTicket.getPrice()) < 0)
 			ISOException.throwIt(SW2_INSUFFICIENT_BALANCE);
 
 		// Handle immediate Sessions
-
 		addScreening(newPurchase);
 		if (rewards == 50) {
 			rewards = 0;
-			logger.logTicketPurchase(newTicket.getIDMovie(),
-					newTicket.getPrice(), Logger.BUY_TICKET_REWARD);
 		} else {
 			rewards += 5;
 			balance = (byte) (balance - newTicket.getPrice());
-			logger.logTicketPurchase(newTicket.getIDMovie(),
-					newTicket.getPrice(), Logger.BUY_TICKET_BALANCE);
 		}
 	}
 	// -------------------- HANDLE TICKETS --------------------------------

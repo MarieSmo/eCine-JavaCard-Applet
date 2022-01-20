@@ -9,18 +9,17 @@ public class Logger {
 
 	private static byte[][] logs;
 	private static byte logIndex;
-
+	private static byte modified;
 	public Logger() {
 		logs = new byte[MAX_LOG][MESSAGE_SIZE];
 		logIndex = -1;
+		modified = 0;
 	}
 	
 	private void logOperation(byte[] params) {
-		if(logIndex == MAX_LOG)
-			logIndex = 0;
-		else
-			logIndex++;
-		
+		logIndex++;
+		logIndex = (byte) (logIndex%MAX_LOG);
+		modified = 1;
 		logs[logIndex] = new byte[MESSAGE_SIZE];
 		
 		for(short i =0; i< MESSAGE_SIZE; ++i) {
@@ -33,7 +32,7 @@ public class Logger {
 	}
 	
 	public void logTicketPurchase (short movieID, byte amount, byte type) {
-		byte[] params = new byte[5];
+		byte[] params = new byte[MESSAGE_SIZE];
 		params[0] = eCine.INS_BUY_TICKET;
 		params[1] =	(byte) (movieID >> 8);
 		params[2] = (byte) (movieID & 0xFF);
@@ -53,12 +52,26 @@ public class Logger {
 	public void logAbort () {
 		byte[] params = new byte[1];
 		params[0] = (byte) -1;
-		logOperation(params);
+		if(modified == 1)
+			logOperation(params);
+		commit();
 	}
 	
+	public void commit () {
+		modified = 0;
+	}
+	
+	public byte getIndex() {
+		return logIndex;
+	}
+	
+	public short getTotalSize() {
+		return (MAX_LOG * MESSAGE_SIZE) + 1;
+	}
 	public byte[] toByteArray() {
-		byte[] allLogs = new byte[MAX_LOG * MESSAGE_SIZE];
-		short gIndex = 0;
+		byte[] allLogs = new byte[getTotalSize()];
+		allLogs[0] = getIndex();
+		short gIndex = 1;
 		for (byte i=0; i< logs.length ; i++) {
 			for(byte j=0; j< logs[i].length; j++) {
 				allLogs[gIndex] = logs[i][j];

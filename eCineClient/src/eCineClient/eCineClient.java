@@ -4,12 +4,20 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.AbstractMap;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Scanner;
+
+
+
+
 
 
 import com.sun.javacard.apduio.Apdu;
@@ -189,6 +197,9 @@ public class eCineClient {
 		manageError(apdu.getStatus(), false);
 		/* Menu principal */
 		boolean fin = false;
+		setDateTime();
+		System.out.println("Today Date : " + year + "/"  + month + "/" + day + " " + time);
+
 		while (!fin) {
 			Scanner scan = new Scanner(System.in);
 			byte[] pin;
@@ -212,7 +223,8 @@ public class eCineClient {
 				System.out.println("3 - Unlock your card");
 				System.out.println("4 - Archive");
 				System.out.println("5 - Get Logs");
-				System.out.println("6 - Quit");
+				System.out.println("6 - Display Archived Movies");
+				System.out.println("7 - Quit");
 				System.out.println();
 				System.out.println("Type Your Choice ?");
 
@@ -276,6 +288,14 @@ public class eCineClient {
 					}
 					break;
 				case 6:
+					if (manageError(verifyPin(apdu, cad, false), false)) {
+						apdu.command[Apdu.INS] = eCine.INS_GET_ARCHIVED_TICKETS;
+						cad.exchangeApdu(apdu);
+						displayMovieLogs(apdu.dataOut, screenings);
+						manageError(apdu.getStatus(), false);
+					}
+					break;
+				case 7:
 					fin = true;
 					break;
 				default:
@@ -299,18 +319,47 @@ public class eCineClient {
 		}
 	}
 	
+	public static void setDateTime() {
+		LocalDateTime now = LocalDateTime.now(); 
+		year = ( byte) (now.getYear() % 2000);
+		month =( byte) now.getMonthValue();
+		day = ( byte) now.getDayOfMonth();
+		time = (short) ((now.getHour() * 60) + now.getMinute());
+	}
+	
+	public static void displayMovieLogs(byte[] data, Map<Integer, AbstractMap.SimpleEntry<String, Screening>> screenings){
+		byte currentIndex = data[0];
+		System.out.println("Archived Movie current index : " + (currentIndex + 1));
+		for(int i=1; i < data.length ; i++) {
+			if(data[i] <= 0) continue;
+			if(i == currentIndex + 1) System.out.print("> ");
+			Integer id = Integer.valueOf(data[i]);
+			SimpleEntry<String, Screening> item = screenings.get(id);
+			System.out.print(item.getValue().getIDMovie() + " " + item.getKey() + "\n");
+		}
+	}
+	
 	public static void displayLogs(byte[] data){
-		for(int i=0; i < data.length ; i+=Logger.MESSAGE_SIZE) {
+		byte currentElement = 0;
+		byte loggerIndex = data[0];
+		System.out.println("Log current index : " + loggerIndex);
+		for(int i=1; i < data.length ; i+=Logger.MESSAGE_SIZE) {
+			if(loggerIndex == currentElement) System.out.print("> ");
 			switch (data[i]) {
 			case eCine.INS_BUY_TICKET:
-				System.out.printf("Purchase: ID:%02d Price:%02d PaymentMethod:%02d\n", (short) (data[i+1] << 8 | data[i+2] & 0xFF) , data[i+3], data[i+4]);
+				System.out.printf("Purchase: ID: %02d Price:%02d PaymentMethod:%02d\n", (short) (data[i+1] << 8 | data[i+2] & 0xFF) , data[i+3], data[i+4]);
 				break;
 			case eCine.INS_REFUND_BALANCE:
-				System.out.printf("TopUp   : Amount:%02d newBalance:%02d\n", data[i+1] ,data[i+2]);
+				System.out.printf("TopUp   : Amount: %02d newBalance: %02d\n", data[i+1] ,data[i+2]);
+				break;
+			case (byte) 0xFF:
+				System.out.printf("Aborted\n");
 				break;
 			default:
 				System.out.printf("Unknown : 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X\n", data[i], data[i+1], data[i+2], data[i+3], data[i+4], data[i+5]);
 			}
+			currentElement++;
+
 		}
 	}
 
@@ -375,6 +424,17 @@ public class eCineClient {
 		data[3] = (byte) (time >> 8);
 		data[4] = (byte) (time & 0xFF);
 		return data;
+	}
+	
+	public static void readDate() {
+		Scanner scanner = new Scanner(System.in);
+	    String date = scanner.nextLine();
+	    Date date1;
+		try {
+			date1 = new SimpleDateFormat("yyyy/MM/dd").parse(date);
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}  
 	}
 
 	public static boolean manageError(int status, boolean notify) {
